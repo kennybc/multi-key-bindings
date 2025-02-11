@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "us.kenny.mixin.client",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"MixinKeybindsScreen"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "better-keybinds",
+	"version": "${version}",
+	"name": "Better Keybinds",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/better-keybinds/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"us.kenny.BetterKeybinds"
+		],
+		"client": [
+			"us.kenny.BetterKeybindsClient"
+		]
+	},
+	"mixins": [
+		"better-keybinds.mixins.json",
+		{
+			"config": "better-keybinds.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.16.10",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}

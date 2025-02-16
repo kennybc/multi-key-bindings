@@ -15,9 +15,6 @@
 	"icon": "assets/better-keybinds/icon.png",
 	"environment": "*",
 	"entrypoints": {
-		"main": [
-			"us.kenny.BetterKeybinds"
-		],
 		"client": [
 			"us.kenny.BetterKeybindsClient"
 		]

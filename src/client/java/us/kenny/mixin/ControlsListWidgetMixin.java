@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.option.ControlsListWidget;
+import net.minecraft.client.gui.screen.option.ControlsListWidget.KeyBindingEntry;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.text.Text;
@@ -14,12 +15,17 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Mixin(ControlsListWidget.KeyBindingEntry.class)
 public abstract class ControlsListWidgetMixin {
     @Final
     @Shadow
     private KeyBinding binding;
+    @Final
+    @Shadow
+    private Text bindingName;
 
     @Shadow
     abstract void update();
@@ -29,13 +35,21 @@ public abstract class ControlsListWidgetMixin {
     @Final
     private ControlsListWidget controlsListWidget;
 
+    private static final Logger LOGGER = LoggerFactory.getLogger("better-key-bindings");
+
+    // Build and register the "+" button
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(ControlsListWidget controlsListWidget, final KeyBinding binding, final Text bindingName, CallbackInfo ci) {
+        ControlsListWidget.KeyBindingEntry self = (KeyBindingEntry) (Object) this;
         this.controlsListWidget = controlsListWidget;
 
-        // Build and register the "+" button
         addKeyBindingButton = ButtonWidget.builder(Text.of("+"), (button) -> {
-                    ((EntryListWidgetAccessor) controlsListWidget).getChildren().clear();
+                    self.setFocused(false);
+
+                    KeyBinding newKeyBinding = new KeyBinding(binding.getTranslationKey() + "_alt", -1, binding.getCategory());
+                    KeyBindingEntry newKeyBindingEntry = KeyBindingEntryAccessor.create(controlsListWidget, newKeyBinding, Text.of("     |"));
+
+                    controlsListWidget.children().add(controlsListWidget.children().indexOf(self) + 1, newKeyBindingEntry);
                     controlsListWidget.update();
                 })
                 .size(20, 20)
@@ -43,6 +57,7 @@ public abstract class ControlsListWidgetMixin {
         this.update();
     }
 
+    // Render the "+" button
     @Inject(method = "render", at = @At("TAIL"))
     private void onRender(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta, CallbackInfo ci) {
         // Mimic the positioning and layout of the existing buttons
@@ -50,7 +65,6 @@ public abstract class ControlsListWidgetMixin {
         int buttonX = scrollbarX - 165; // 5 wide gap between buttons, 20 wide "+" button
         int buttonY = y - 2; // Align with the existing buttons
 
-        // Render the "+" button
         addKeyBindingButton.setPosition(buttonX, buttonY);
         addKeyBindingButton.render(context, mouseX, mouseY, tickDelta);
     }

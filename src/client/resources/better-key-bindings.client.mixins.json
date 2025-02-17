@@ -3,8 +3,8 @@
   "package": "us.kenny.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "EntryListWidgetAccessor",
-    "ControlsListWidgetMixin"
+    "ControlsListWidgetMixin",
+    "KeyBindingEntryAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

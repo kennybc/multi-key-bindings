@@ -3,7 +3,7 @@ package us.kenny;
 import java.util.UUID;
 
 public class MultiKeyBinding {
-    private final int keyCode;
+    private int keyCode;
     private final String action;
     private final UUID id;
 
@@ -22,6 +22,10 @@ public class MultiKeyBinding {
 
     public int getKeyCode() {
         return keyCode;
+    }
+
+    public void setKeyCode(int newKeyCode) {
+        this.keyCode = newKeyCode;
     }
 
     public String getAction() {

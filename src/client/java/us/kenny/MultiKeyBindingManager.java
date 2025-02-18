@@ -3,8 +3,7 @@ package us.kenny;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -18,7 +17,7 @@ import static us.kenny.MultiKeyBindings.LOGGER;
 public class MultiKeyBindingManager {
     private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("multi-key-bindings.json");
     private static final Gson GSON = new Gson();
-    private static final Map<String, List<MultiKeyBinding>> MULTI_KEY_BINDINGS = new HashMap<>();
+    private static final Map<String, Map<UUID, MultiKeyBinding>> MULTI_KEY_BINDINGS = new HashMap<>();
 
     static {
         load();
@@ -26,19 +25,28 @@ public class MultiKeyBindingManager {
 
     public static UUID addKeyBinding(String action, int keyCode) {
         MultiKeyBinding multiKeyBinding = new MultiKeyBinding(action, keyCode);
-        MULTI_KEY_BINDINGS.computeIfAbsent(action, k -> new ArrayList<>()).add(multiKeyBinding);
+        MULTI_KEY_BINDINGS.computeIfAbsent(action, k -> new HashMap<>()).put(multiKeyBinding.getId(), multiKeyBinding);
         save();
         return multiKeyBinding.getId();
     }
 
-    public static List<MultiKeyBinding> getKeyBindings(String action) {
-        return MULTI_KEY_BINDINGS.getOrDefault(action, new ArrayList<>());
+    public static Collection<MultiKeyBinding> getKeyBindings(String action) {
+        return MULTI_KEY_BINDINGS.getOrDefault(action, new HashMap<>()).values();
+    }
+
+    public static void setKeyBinding(String action, UUID multiKeyBindingId, int newKeyCode) {
+        Map<UUID, MultiKeyBinding> keyBindings = MULTI_KEY_BINDINGS.get(action);
+        MultiKeyBinding binding = keyBindings.get(multiKeyBindingId);
+        if (binding != null) {
+            binding.setKeyCode(newKeyCode);
+            save();
+        }
     }
 
     public static void removeKeyBinding(String action, UUID multiKeyBindingId) {
-        List<MultiKeyBinding> keyBindings = MULTI_KEY_BINDINGS.get(action);
+        Map<UUID, MultiKeyBinding> keyBindings = MULTI_KEY_BINDINGS.get(action);
         if (keyBindings != null) {
-            keyBindings.removeIf(multiKeyBinding -> multiKeyBindingId.equals(multiKeyBinding.getId()));
+            keyBindings.remove(multiKeyBindingId);
             if (keyBindings.isEmpty()) {
                 MULTI_KEY_BINDINGS.remove(action);
             }
@@ -48,14 +56,24 @@ public class MultiKeyBindingManager {
 
     private static void save() {
         try {
-            // Store key bindings as JSON in config file
-            Map<String, List<SerializableMultiKeyBinding>> serialized = new HashMap<>();
-            for (Map.Entry<String, List<MultiKeyBinding>> entry : MULTI_KEY_BINDINGS.entrySet()) {
-                List<SerializableMultiKeyBinding> serializedBindings = entry.getValue().stream()
-                        .map(SerializableMultiKeyBinding::new)
-                        .collect(Collectors.toList());
-                serialized.put(entry.getKey(), serializedBindings);
+            // Structure: Map<Action, Map<UUID, MultiKeyBinding>>
+            Map<String, Map<String, SerializableMultiKeyBinding>> serialized = new HashMap<>();
+
+            for (Map.Entry<String, Map<UUID, MultiKeyBinding>> entry : MULTI_KEY_BINDINGS.entrySet()) {
+                String action = entry.getKey();
+                Map<UUID, MultiKeyBinding> innerMap = entry.getValue();
+
+                // Convert inner map to a map of UUID strings to SerializableMultiKeyBinding
+                Map<String, SerializableMultiKeyBinding> serializedInner = new HashMap<>();
+                for (Map.Entry<UUID, MultiKeyBinding> innerEntry : innerMap.entrySet()) {
+                    UUID id = innerEntry.getKey();
+                    MultiKeyBinding binding = innerEntry.getValue();
+                    serializedInner.put(id.toString(), new SerializableMultiKeyBinding(binding));
+                }
+
+                serialized.put(action, serializedInner);
             }
+
             Files.writeString(CONFIG_PATH, GSON.toJson(serialized));
         } catch (IOException e) {
             e.printStackTrace();
@@ -66,37 +84,47 @@ public class MultiKeyBindingManager {
         if (Files.exists(CONFIG_PATH)) {
             try {
                 String content = Files.readString(CONFIG_PATH);
-                Type type = new TypeToken<Map<String, List<SerializableMultiKeyBinding>>>() {
+                Type type = new TypeToken<Map<String, Map<UUID, SerializableMultiKeyBinding>>>() {
                 }.getType();
-                Map<String, List<SerializableMultiKeyBinding>> serialized = GSON.fromJson(content, type);
+                Map<String, Map<UUID, SerializableMultiKeyBinding>> serialized = GSON.fromJson(content, type);
 
-                // Deserialize the multi key bindings
-                for (Map.Entry<String, List<SerializableMultiKeyBinding>> entry : serialized.entrySet()) {
-                    List<MultiKeyBinding> deserializedBindings = entry.getValue().stream()
-                            .map(SerializableMultiKeyBinding::toMultiKeyBinding)
-                            .collect(Collectors.toList());
-                    MULTI_KEY_BINDINGS.put(entry.getKey(), deserializedBindings);
+                // Clear existing bindings to avoid duplicates
+                MULTI_KEY_BINDINGS.clear();
+
+                for (Map.Entry<String, Map<UUID, SerializableMultiKeyBinding>> entry : serialized.entrySet()) {
+                    String action = entry.getKey();
+                    Map<UUID, MultiKeyBinding> innerMap = getInnerMultiKeyBindingMap(entry, action);
+
+                    MULTI_KEY_BINDINGS.put(action, innerMap);
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                LOGGER.error("Failed to load config file: ", e);
             }
         }
     }
 
-    // Helper class for serialization
+    private static @NotNull Map<UUID, MultiKeyBinding> getInnerMultiKeyBindingMap(Map.Entry<String, Map<UUID, SerializableMultiKeyBinding>> entry, String action) {
+        Map<UUID, SerializableMultiKeyBinding> innerSerialized = entry.getValue();
+
+        // Convert inner map to UUID → MultiKeyBinding
+        Map<UUID, MultiKeyBinding> innerMap = new HashMap<>();
+        for (Map.Entry<UUID, SerializableMultiKeyBinding> innerEntry : innerSerialized.entrySet()) {
+            UUID id = innerEntry.getKey();
+            MultiKeyBinding binding = innerEntry.getValue().toMultiKeyBinding(action, id);
+            innerMap.put(id, binding);
+        }
+        return innerMap;
+    }
+
     private static class SerializableMultiKeyBinding {
-        private final String action;
         private final int keyCode;
-        private final UUID id;
 
         public SerializableMultiKeyBinding(MultiKeyBinding multiKeyBinding) {
-            this.action = multiKeyBinding.getAction();
-            this.keyCode = multiKeyBinding.getKeyCode();
-            this.id = multiKeyBinding.getId();
+            this.keyCode = multiKeyBinding.getKeyCode(); // Only need to serialize keyCode
         }
 
-        public MultiKeyBinding toMultiKeyBinding() {
-            return new MultiKeyBinding(action, keyCode, id);
+        public MultiKeyBinding toMultiKeyBinding(String action, UUID multiKeyBindingId) {
+            return new MultiKeyBinding(action, keyCode, multiKeyBindingId);
         }
     }
 }

@@ -22,7 +22,7 @@ loom {
     splitEnvironmentSourceSets()
 
     mods {
-        "better-key-bindings" {
+        "multi-key-bindings" {
             sourceSet sourceSets.main
             sourceSet sourceSets.client
         }

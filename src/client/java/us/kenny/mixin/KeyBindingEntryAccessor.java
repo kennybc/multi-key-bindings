@@ -15,4 +15,7 @@ public interface KeyBindingEntryAccessor {
     static ControlsListWidget.KeyBindingEntry create(ControlsListWidget widget, KeyBinding binding, Text bindingName) {
         return null;
     }
+
+    @Accessor("binding")
+    KeyBinding getBinding();
 }

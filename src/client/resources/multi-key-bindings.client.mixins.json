@@ -4,7 +4,10 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "ControlsListWidgetMixin",
-    "KeyBindingEntryAccessor"
+    "KeyBindingEntryAccessor",
+    "KeyBindingEntryMixin",
+    "KeyBindingMixin",
+    "KeybindsScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

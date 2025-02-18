@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "better-key-bindings",
+  "id": "multi-key-bindings",
   "version": "${version}",
   "name": "Better Key Bindings",
   "description": "This is an example description! Tell everyone what your mod is about!",
@@ -12,17 +12,17 @@
     "sources": "https://github.com/FabricMC/fabric-example-mod"
   },
   "license": "CC0-1.0",
-  "icon": "assets/better-key-bindings/icon.png",
+  "icon": "assets/multi-key-bindings/icon.png",
   "environment": "*",
   "entrypoints": {
     "client": [
-      "us.kenny.BetterKeyBindings"
+      "us.kenny.MultiKeyBindings"
     ]
   },
   "mixins": [
-    "better-key-bindings.mixins.json",
+    "multi-key-bindings.mixins.json",
     {
-      "config": "better-key-bindings.client.mixins.json",
+      "config": "multi-key-bindings.client.mixins.json",
       "environment": "client"
     }
   ],

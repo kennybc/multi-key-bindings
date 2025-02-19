@@ -1,141 +1,149 @@
 package us.kenny;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import us.kenny.mixin.KeyBindingAccessor;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
+import java.io.Reader;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-public class MultiKeyBindingManager {
+public class MultiKeyBindingManager implements ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("multi-key-bindings");
     private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("multi-key-bindings.json");
     private static final Gson GSON = new Gson();
-    private static final Map<String, Map<UUID, MultiKeyBinding>> MULTI_KEY_BINDINGS = new HashMap<>();
+
+    private static final Map<String, List<KeyBinding>> ACTION_TO_KEY_BINDINGS = new HashMap<>();
     private static final Map<InputUtil.Key, List<KeyBinding>> KEY_TO_KEY_BINDINGS = new HashMap<>();
+    private static final Map<UUID, KeyBinding> ID_TO_KEY_BINDING = new HashMap<>();
 
-    static {
-        load();
+    private static boolean isLoading = false;
+
+    public static boolean isLoading() {
+        return isLoading;
     }
 
-    public static void associateKeyWithKeyBinding(InputUtil.Key key, KeyBinding keyBinding) {
+    public static KeyBinding addKeyBinding(String action, int keyCode) {
+        UUID newId = UUID.randomUUID();
+        action = "multi." + action;
+
+        InputUtil.Key key = InputUtil.Type.KEYSYM.createFromCode(keyCode);
+        KeyBinding keyBinding = new KeyBinding(action, -1, newId.toString());
+        keyBinding.setBoundKey(key);
+
+        LOGGER.info("Added key binding with key type" + key.getCode());
+
+        ID_TO_KEY_BINDING.put(newId, keyBinding);
+        ACTION_TO_KEY_BINDINGS.computeIfAbsent(action, k -> new ArrayList<>()).add(keyBinding);
         KEY_TO_KEY_BINDINGS.computeIfAbsent(key, k -> new ArrayList<>()).add(keyBinding);
-    }
-
-    public static UUID addKeyBinding(String action, int keyCode) {
-        MultiKeyBinding multiKeyBinding = new MultiKeyBinding(action, keyCode);
-        MULTI_KEY_BINDINGS.computeIfAbsent(action, k -> new HashMap<>()).put(multiKeyBinding.getId(), multiKeyBinding);
         save();
-        return multiKeyBinding.getId();
+
+        return keyBinding;
     }
 
-    public static Collection<MultiKeyBinding> getKeyBindings(String action) {
-        return MULTI_KEY_BINDINGS.getOrDefault(action, new HashMap<>()).values();
+    public static Collection<KeyBinding> getKeyBindings(String action) {
+        return ACTION_TO_KEY_BINDINGS.getOrDefault("multi." + action, new ArrayList<>());
     }
 
     public static Collection<KeyBinding> getKeyBindings(InputUtil.Key key) {
         return KEY_TO_KEY_BINDINGS.getOrDefault(key, new ArrayList<>());
     }
 
-    public static void setKeyBinding(String action, UUID multiKeyBindingId, int newKeyCode) {
-        Map<UUID, MultiKeyBinding> keyBindings = MULTI_KEY_BINDINGS.get(action);
-        MultiKeyBinding binding = keyBindings.get(multiKeyBindingId);
-        if (binding != null) {
-            binding.setKeyCode(newKeyCode);
-            save();
+    public static void setKeyBinding(UUID keyBindingId, int newKeyCode) {
+        KeyBinding keyBinding = ID_TO_KEY_BINDING.get(keyBindingId);
+        if (keyBinding == null) return;
+
+        InputUtil.Key oldKey = ((KeyBindingAccessor) keyBinding).getBoundKey();
+        if (oldKey.getCode() == newKeyCode) return;
+
+        // Remove from old key to key binding, add to new one
+        List<KeyBinding> keyToKeyBindings = KEY_TO_KEY_BINDINGS.get(oldKey);
+        if (keyToKeyBindings != null) {
+            keyToKeyBindings.remove(keyBinding);
         }
+        KEY_TO_KEY_BINDINGS.computeIfAbsent(InputUtil.Type.KEYSYM.createFromCode(newKeyCode), k -> new ArrayList<>()).add(keyBinding);
     }
 
-    public static void removeKeyBinding(String action, UUID multiKeyBindingId) {
-        Map<UUID, MultiKeyBinding> keyBindings = MULTI_KEY_BINDINGS.get(action);
-        if (keyBindings != null) {
-            keyBindings.remove(multiKeyBindingId);
-            if (keyBindings.isEmpty()) {
-                MULTI_KEY_BINDINGS.remove(action);
+    public static void removeKeyBinding(UUID keyBindingId) {
+        KeyBinding keyBinding = ID_TO_KEY_BINDING.remove(keyBindingId);
+        if (keyBinding != null) {
+            List<KeyBinding> actionToKeyBindings = ACTION_TO_KEY_BINDINGS.get(keyBinding.getTranslationKey());
+            if (actionToKeyBindings != null) {
+                actionToKeyBindings.remove(keyBinding);
             }
-            save();
+            List<KeyBinding> keyToKeyBindings = KEY_TO_KEY_BINDINGS.get(((KeyBindingAccessor) keyBinding).getBoundKey());
+            if (keyToKeyBindings != null) {
+                keyToKeyBindings.remove(keyBinding);
+            }
         }
+        save();
     }
 
-    private static void save() {
-        try {
-            // Structure: Map<Action, Map<UUID, MultiKeyBinding>>
-            Map<String, Map<String, SerializableMultiKeyBinding>> serialized = new HashMap<>();
+    public static void save() {
+        try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
+            JsonObject json = new JsonObject();
 
-            for (Map.Entry<String, Map<UUID, MultiKeyBinding>> entry : MULTI_KEY_BINDINGS.entrySet()) {
-                String action = entry.getKey();
-                Map<UUID, MultiKeyBinding> innerMap = entry.getValue();
+            // Save ID to KeyBinding
+            JsonArray keyBindingsArray = new JsonArray();
+            for (Map.Entry<UUID, KeyBinding> entry : ID_TO_KEY_BINDING.entrySet()) {
+                JsonObject keyBindingJson = new JsonObject();
+                keyBindingJson.addProperty("id", entry.getKey().toString());
+                keyBindingJson.addProperty("action", entry.getValue().getTranslationKey());
+                keyBindingJson.addProperty("keyCode", ((KeyBindingAccessor) entry.getValue()).getBoundKey().getCode());
 
-                // Convert inner map to a map of UUID strings to SerializableMultiKeyBinding
-                Map<String, SerializableMultiKeyBinding> serializedInner = new HashMap<>();
-                for (Map.Entry<UUID, MultiKeyBinding> innerEntry : innerMap.entrySet()) {
-                    UUID id = innerEntry.getKey();
-                    MultiKeyBinding binding = innerEntry.getValue();
-                    serializedInner.put(id.toString(), new SerializableMultiKeyBinding(binding));
-                }
-
-                serialized.put(action, serializedInner);
+                keyBindingsArray.add(keyBindingJson);
             }
+            json.add("keyBindings", keyBindingsArray);
 
-            Files.writeString(CONFIG_PATH, GSON.toJson(serialized));
+            GSON.toJson(json, writer);
         } catch (IOException e) {
-            LOGGER.error("Failed to save config file: ", e);
+            LOGGER.error("Failed to save keybindings config", e);
         }
     }
 
     private static void load() {
-        if (Files.exists(CONFIG_PATH)) {
-            try {
-                String content = Files.readString(CONFIG_PATH);
-                Type type = new TypeToken<Map<String, Map<UUID, SerializableMultiKeyBinding>>>() {
-                }.getType();
-                Map<String, Map<UUID, SerializableMultiKeyBinding>> serialized = GSON.fromJson(content, type);
+        if (!Files.exists(CONFIG_PATH)) return;
 
-                // Clear existing bindings to avoid duplicates
-                MULTI_KEY_BINDINGS.clear();
+        isLoading = true;
+        try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
+            JsonObject json = GSON.fromJson(reader, JsonObject.class);
+            if (json == null || !json.has("keyBindings")) return;
 
-                for (Map.Entry<String, Map<UUID, SerializableMultiKeyBinding>> entry : serialized.entrySet()) {
-                    String action = entry.getKey();
-                    Map<UUID, MultiKeyBinding> innerMap = getInnerMultiKeyBindingMap(entry, action);
+            JsonArray keyBindingsArray = json.getAsJsonArray("keyBindings");
+            for (JsonElement element : keyBindingsArray) {
+                JsonObject keyBindingJson = element.getAsJsonObject();
+                UUID id = UUID.fromString(keyBindingJson.get("id").getAsString());
+                String action = keyBindingJson.get("action").getAsString();
+                int keyCode = keyBindingJson.get("keyCode").getAsInt();
 
-                    MULTI_KEY_BINDINGS.put(action, innerMap);
-                }
-            } catch (IOException e) {
-                LOGGER.error("Failed to load config file: ", e);
+                InputUtil.Key key = InputUtil.Type.KEYSYM.createFromCode(keyCode);
+                KeyBinding keyBinding = new KeyBinding(action, -1, id.toString());
+                keyBinding.setBoundKey(key);
+
+                ID_TO_KEY_BINDING.put(id, keyBinding);
+                ACTION_TO_KEY_BINDINGS.computeIfAbsent(action, k -> new ArrayList<>()).add(keyBinding);
+                KEY_TO_KEY_BINDINGS.computeIfAbsent(key, k -> new ArrayList<>()).add(keyBinding);
             }
+        } catch (IOException e) {
+            LOGGER.error("Failed to load config", e);
+        } finally {
+            isLoading = false;
         }
     }
 
-    private static @NotNull Map<UUID, MultiKeyBinding> getInnerMultiKeyBindingMap(Map.Entry<String, Map<UUID, SerializableMultiKeyBinding>> entry, String action) {
-        Map<UUID, SerializableMultiKeyBinding> innerSerialized = entry.getValue();
-
-        // Convert inner map to UUID → MultiKeyBinding
-        Map<UUID, MultiKeyBinding> innerMap = new HashMap<>();
-        for (Map.Entry<UUID, SerializableMultiKeyBinding> innerEntry : innerSerialized.entrySet()) {
-            UUID id = innerEntry.getKey();
-            MultiKeyBinding binding = innerEntry.getValue().toMultiKeyBinding(action, id);
-            innerMap.put(id, binding);
-        }
-        return innerMap;
-    }
-
-    private static class SerializableMultiKeyBinding {
-        private final int keyCode;
-
-        public SerializableMultiKeyBinding(MultiKeyBinding multiKeyBinding) {
-            this.keyCode = multiKeyBinding.getKeyCode(); // Only need to serialize keyCode
-        }
-
-        public MultiKeyBinding toMultiKeyBinding(String action, UUID multiKeyBindingId) {
-            return new MultiKeyBinding(action, keyCode, multiKeyBindingId);
-        }
+    @Override
+    public void onInitializeClient() {
+        load();
     }
 }

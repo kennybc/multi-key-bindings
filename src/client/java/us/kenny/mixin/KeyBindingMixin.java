@@ -10,7 +10,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import us.kenny.MultiKeyBinding;
 import us.kenny.MultiKeyBindingManager;
 
 import java.util.Collection;
@@ -51,9 +50,9 @@ public abstract class KeyBindingMixin {
     @Inject(method = "isPressed", at = @At("HEAD"), cancellable = true)
     private void onIsPressed(CallbackInfoReturnable<Boolean> cir) {
         // Check if any bound keys from our manager are pressed
-        Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getTranslationKey());
-        for (MultiKeyBinding binding : multiKeyBindings) {
-            if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), binding.getKeyCode())) {
+        Collection<KeyBinding> keyBindings = MultiKeyBindingManager.getKeyBindings(this.getTranslationKey());
+        for (KeyBinding keyBinding : keyBindings) {
+            if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), ((KeyBindingAccessor) keyBinding).getBoundKey().getCode())) {
                 cir.setReturnValue(true);
                 return;
             }
@@ -68,28 +67,42 @@ public abstract class KeyBindingMixin {
      * NOTE: This covers mocking functionality in "on-demand" actions, where an event is triggered by the single
      * press of a key.
      */
-    @Inject(method = "onKeyPressed", at = @At("TAIL"), cancellable = true)
+    @Inject(method = "onKeyPressed", at = @At("TAIL"))
     private static void onOnKeyPressed(InputUtil.Key key, CallbackInfo ci) {
-        Collection<KeyBinding> customBindings = MultiKeyBindingManager.getKeyBindings(key);
-        for (KeyBinding binding : customBindings) {
-            if (binding != null) {
-                ((KeyBindingAccessor) binding).setTimesPressed(((KeyBindingAccessor) binding).getTimesPressed() + 1);
+        Collection<KeyBinding> keyBindings = MultiKeyBindingManager.getKeyBindings(key);
+        MultiKeyBindingManager.LOGGER.info(keyBindings.toString());
+        MultiKeyBindingManager.LOGGER.info(String.valueOf(key.getCode()));
+        for (KeyBinding keyBinding : keyBindings) {
+            if (keyBinding != null) {
+                KeyBinding parentKeyBinding = KeyBindingAccessor.getKeysByIdMap().get(keyBinding.getTranslationKey().substring(6));
+                ((KeyBindingAccessor) parentKeyBinding).setTimesPressed(((KeyBindingAccessor) parentKeyBinding).getTimesPressed() + 1);
             }
         }
     }
 
     /**
-     * Injected in the setBoundKey method:
+     * Injected in the setBoundKey method (at the head):
      * The injected code will check to see if any of our custom bindings are updated in their "dummy" KeyBinding
      * instances.
      * If any are updated, reflect the updates in our manager.
      */
-    @Inject(method = "setBoundKey", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "setBoundKey", at = @At("HEAD"))
     private void onSetBoundKey(InputUtil.Key boundKey, CallbackInfo ci) {
-        if (!getTranslationKey().startsWith("multi.")) return;
-        MultiKeyBindingManager.setKeyBinding(
-                getTranslationKey().replaceFirst("^multi.", ""),
-                UUID.fromString(getCategory()),
-                boundKey.getCode());
+        if (getTranslationKey().startsWith("multi.") && !MultiKeyBindingManager.isLoading()) {
+            MultiKeyBindingManager.setKeyBinding(UUID.fromString(getCategory()), boundKey.getCode());
+        }
+    }
+
+    /**
+     * Injected in the setBoundKey method (at the tail):
+     * The injected code will tell our manager to save the changes we just made to our config file.
+     * The reason this code is injected is to prevent the circular logic that would occur if we call save()
+     * from the manager setKeyBinding(...) method.
+     */
+    @Inject(method = "setBoundKey", at = @At("TAIL"))
+    private void afterSetBoundKey(InputUtil.Key boundKey, CallbackInfo ci) {
+        if (getTranslationKey().startsWith("multi.") && !MultiKeyBindingManager.isLoading()) {
+            MultiKeyBindingManager.save();
+        }
     }
 }

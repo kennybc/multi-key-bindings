@@ -14,9 +14,12 @@
   "license": "CC0-1.0",
   "icon": "assets/multi-key-bindings/icon.png",
   "environment": "*",
-  "entrypoints": {},
+  "entrypoints": {
+    "client": [
+      "us.kenny.MultiKeyBindingManager"
+    ]
+  },
   "mixins": [
-    "multi-key-bindings.mixins.json",
     {
       "config": "multi-key-bindings.client.mixins.json",
       "environment": "client"
@@ -27,8 +30,5 @@
     "minecraft": "~1.21.4",
     "java": ">=21",
     "fabric-api": "*"
-  },
-  "suggests": {
-    "another-mod": "*"
   }
 }

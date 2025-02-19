@@ -13,6 +13,7 @@ import net.minecraft.util.Formatting;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -43,27 +44,25 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
     /**
      * Register the new binding in our manager and build a widget (KeyBindingEntry) for it.
      */
-    private void createMultiKeyBinding() {
-        UUID multiKeyBindingId = MultiKeyBindingManager.addKeyBinding(binding.getTranslationKey(), -1);
+    @Unique
+    private void createCustomKeyBinding() {
+        KeyBinding keyBinding = MultiKeyBindingManager.addKeyBinding(binding.getTranslationKey(), -1);
 
-        // Prefix the "dummy" KeyBinding so that we know it's one of our custom bindings & store our MultiKeyBinding UUID in the KeyBinding category field
-        KeyBinding newKeyBinding = new KeyBinding("multi." + binding.getTranslationKey(), -1, multiKeyBindingId.toString());
-        KeyBindingEntry newKeyBindingEntry = KeyBindingEntryAccessor.create(controlsListWidget, newKeyBinding, Text.of("     |"));
-
-        controlsListWidget.children().add(controlsListWidget.children().indexOf(this.self) + 1, newKeyBindingEntry);
+        KeyBindingEntry keyBindingEntry = KeyBindingEntryAccessor.create(controlsListWidget, keyBinding, Text.of("     |"));
+        controlsListWidget.children().add(controlsListWidget.children().indexOf(this.self) + 1, keyBindingEntry);
     }
 
     /**
      * Unregister the binding in our manager and remove its widget.
      *
-     * @param action            The game action which the key binding is an alternate binding of.
-     * @param multiKeyBindingId The UUID of the key binding to remove.
+     * @param keyBindingId The UUID of the key binding to remove.
      */
-    private void removeMultiKeyBinding(String action, UUID multiKeyBindingId) {
-        MultiKeyBindingManager.removeKeyBinding(action, multiKeyBindingId);
+    @Unique
+    private void removeMultiKeyBinding(UUID keyBindingId) {
+        MultiKeyBindingManager.removeKeyBinding(keyBindingId);
 
         controlsListWidget.children().removeIf(c -> c instanceof KeyBindingEntry
-                && ((KeyBindingEntryAccessor) c).getBinding().getCategory().equals(multiKeyBindingId.toString()));
+                && ((KeyBindingEntryAccessor) c).getBinding().getCategory().equals(keyBindingId.toString()));
     }
 
     /**
@@ -81,7 +80,7 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
         // If this is one our custom key bindings, build a "delete" button
         if (binding.getTranslationKey().startsWith("multi.")) {
             this.addKeyBindingButton = ButtonWidget.builder(Text.literal("\uD83D\uDDD1").formatted(Formatting.RED), (button) ->
-                            removeMultiKeyBinding(binding.getTranslationKey().replaceFirst("^multi.", ""), UUID.fromString(binding.getCategory()))
+                            removeMultiKeyBinding(UUID.fromString(binding.getCategory()))
                     )
                     .size(20, 20)
                     .build();
@@ -89,7 +88,7 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
             // If this is a native key binding, build a "+" button
             this.addKeyBindingButton = ButtonWidget.builder(Text.of("+"), (button) -> {
                         this.self.setFocused(false);
-                        createMultiKeyBinding();
+                        createCustomKeyBinding();
                     })
                     .size(20, 20)
                     .build();

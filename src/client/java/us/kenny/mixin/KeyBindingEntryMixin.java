@@ -80,15 +80,15 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
 
         // If this is one our custom key bindings, build a "delete" button
         if (binding.getTranslationKey().startsWith("multi.")) {
-            this.addKeyBindingButton = ButtonWidget.builder(Text.literal("\uD83D\uDDD1").formatted(Formatting.RED), (button) -> {
-                        removeMultiKeyBinding(binding.getTranslationKey().replaceFirst("^multi.", ""), UUID.fromString(binding.getCategory()));
-                    })
+            this.addKeyBindingButton = ButtonWidget.builder(Text.literal("\uD83D\uDDD1").formatted(Formatting.RED), (button) ->
+                            removeMultiKeyBinding(binding.getTranslationKey().replaceFirst("^multi.", ""), UUID.fromString(binding.getCategory()))
+                    )
                     .size(20, 20)
                     .build();
         } else {
             // If this is a native key binding, build a "+" button
             this.addKeyBindingButton = ButtonWidget.builder(Text.of("+"), (button) -> {
-                        self.setFocused(false);
+                        this.self.setFocused(false);
                         createMultiKeyBinding();
                     })
                     .size(20, 20)

@@ -6,8 +6,7 @@ public class MultiKeyBinding {
     private int keyCode;
     private final String action;
     private final UUID id;
-
-    // For loading an existing binding from config
+    
     public MultiKeyBinding(String action, int keyCode, UUID id) {
         this.action = action;
         this.keyCode = keyCode;

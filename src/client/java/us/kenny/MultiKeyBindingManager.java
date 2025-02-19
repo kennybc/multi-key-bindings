@@ -3,24 +3,31 @@ package us.kenny;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.stream.Collectors;
-
-import static us.kenny.MultiKeyBindings.LOGGER;
 
 public class MultiKeyBindingManager {
+    public static final Logger LOGGER = LoggerFactory.getLogger("multi-key-bindings");
     private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("multi-key-bindings.json");
     private static final Gson GSON = new Gson();
     private static final Map<String, Map<UUID, MultiKeyBinding>> MULTI_KEY_BINDINGS = new HashMap<>();
+    private static final Map<InputUtil.Key, List<KeyBinding>> KEY_TO_KEY_BINDINGS = new HashMap<>();
 
     static {
         load();
+    }
+
+    public static void associateKeyWithKeyBinding(InputUtil.Key key, KeyBinding keyBinding) {
+        KEY_TO_KEY_BINDINGS.computeIfAbsent(key, k -> new ArrayList<>()).add(keyBinding);
     }
 
     public static UUID addKeyBinding(String action, int keyCode) {
@@ -32,6 +39,10 @@ public class MultiKeyBindingManager {
 
     public static Collection<MultiKeyBinding> getKeyBindings(String action) {
         return MULTI_KEY_BINDINGS.getOrDefault(action, new HashMap<>()).values();
+    }
+
+    public static Collection<KeyBinding> getKeyBindings(InputUtil.Key key) {
+        return KEY_TO_KEY_BINDINGS.getOrDefault(key, new ArrayList<>());
     }
 
     public static void setKeyBinding(String action, UUID multiKeyBindingId, int newKeyCode) {
@@ -76,7 +87,7 @@ public class MultiKeyBindingManager {
 
             Files.writeString(CONFIG_PATH, GSON.toJson(serialized));
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Failed to save config file: ", e);
         }
     }
 

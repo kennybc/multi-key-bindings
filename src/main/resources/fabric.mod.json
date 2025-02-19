@@ -14,11 +14,7 @@
   "license": "CC0-1.0",
   "icon": "assets/multi-key-bindings/icon.png",
   "environment": "*",
-  "entrypoints": {
-    "client": [
-      "us.kenny.MultiKeyBindings"
-    ]
-  },
+  "entrypoints": {},
   "mixins": [
     "multi-key-bindings.mixins.json",
     {

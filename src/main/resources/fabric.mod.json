@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "multi-key-bindings",
   "version": "${version}",
-  "name": "Better Key Bindings",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "name": "Multi Key Bindings",
+  "description": "Allows players to create multiple keybindings for the same action/function.",
   "authors": [
     "Me!"
   ],

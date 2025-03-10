@@ -73,7 +73,7 @@ public abstract class KeyBindingMixin {
     @Inject(method = "setBoundKey", at = @At("HEAD"))
     private void onSetBoundKey(InputUtil.Key boundKey, CallbackInfo ci) {
         if (getTranslationKey().startsWith("multi.") && !MultiKeyBindingManager.isLoading()) {
-            MultiKeyBindingManager.setKeyBinding(UUID.fromString(getCategory()), boundKey.getCode());
+            MultiKeyBindingManager.setKeyBinding(UUID.fromString(getCategory()), boundKey);
         }
     }
 

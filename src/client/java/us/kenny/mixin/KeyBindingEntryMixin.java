@@ -29,16 +29,16 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
     private KeyBinding binding;
     @Final
     @Shadow
-    private Text bindingName;
-    @Final
-    @Shadow
     private ButtonWidget editButton;
     @Final
     @Shadow
     private ButtonWidget resetButton;
 
+    @Unique
     private ButtonWidget addKeyBindingButton;
+    @Unique
     private ControlsListWidget controlsListWidget;
+    @Unique
     private KeyBindingEntry self;
 
     /**
@@ -46,7 +46,7 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
      */
     @Unique
     private void createCustomKeyBinding() {
-        KeyBinding keyBinding = MultiKeyBindingManager.addKeyBinding(binding.getTranslationKey(), -1);
+        KeyBinding keyBinding = MultiKeyBindingManager.addKeyBinding(binding.getTranslationKey(), "key.keyboard.unknown");
 
         KeyBindingEntry keyBindingEntry = KeyBindingEntryAccessor.create(controlsListWidget, keyBinding, Text.of("     |"));
         controlsListWidget.children().add(controlsListWidget.children().indexOf(this.self) + 1, keyBindingEntry);

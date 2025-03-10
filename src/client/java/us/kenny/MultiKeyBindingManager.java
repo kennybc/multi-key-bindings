@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.option.KeyBinding;
@@ -34,20 +35,24 @@ public class MultiKeyBindingManager implements ClientModInitializer {
         return isLoading;
     }
 
-    public static KeyBinding addKeyBinding(String action, int keyCode) {
+    public static KeyBinding addKeyBinding(String action, String translationKey) {
         UUID newId = UUID.randomUUID();
         action = "multi." + action;
 
-        InputUtil.Key key = InputUtil.Type.KEYSYM.createFromCode(keyCode);
+        KeyBinding keyBinding = addKeyBindingToMap(action, translationKey, newId);
+        save();
+
+        return keyBinding;
+    }
+
+    private static KeyBinding addKeyBindingToMap(String action, String translationKey, UUID newId) {
+        InputUtil.Key key = InputUtil.fromTranslationKey(translationKey);
         KeyBinding keyBinding = new KeyBinding(action, -1, newId.toString());
         keyBinding.setBoundKey(key);
-
-        LOGGER.info("Added key binding with key type" + key.getCode());
 
         ID_TO_KEY_BINDING.put(newId, keyBinding);
         ACTION_TO_KEY_BINDINGS.computeIfAbsent(action, k -> new ArrayList<>()).add(keyBinding);
         KEY_TO_KEY_BINDINGS.computeIfAbsent(key, k -> new ArrayList<>()).add(keyBinding);
-        save();
 
         return keyBinding;
     }
@@ -127,13 +132,7 @@ public class MultiKeyBindingManager implements ClientModInitializer {
                 String action = keyBindingJson.get("action").getAsString();
                 String translationKey = keyBindingJson.get("key").getAsString();
 
-                InputUtil.Key key = InputUtil.fromTranslationKey(translationKey);
-                KeyBinding keyBinding = new KeyBinding(action, -1, id.toString());
-                keyBinding.setBoundKey(key);
-
-                ID_TO_KEY_BINDING.put(id, keyBinding);
-                ACTION_TO_KEY_BINDINGS.computeIfAbsent(action, k -> new ArrayList<>()).add(keyBinding);
-                KEY_TO_KEY_BINDINGS.computeIfAbsent(key, k -> new ArrayList<>()).add(keyBinding);
+                addKeyBindingToMap(action, translationKey, id);
             }
         } catch (IOException e) {
             LOGGER.error("Failed to load config", e);

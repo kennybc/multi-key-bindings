@@ -65,19 +65,19 @@ public class MultiKeyBindingManager implements ClientModInitializer {
         return KEY_TO_KEY_BINDINGS.getOrDefault(key, new ArrayList<>());
     }
 
-    public static void setKeyBinding(UUID keyBindingId, int newKeyCode) {
+    public static void setKeyBinding(UUID keyBindingId, InputUtil.Key newKey) {
         KeyBinding keyBinding = ID_TO_KEY_BINDING.get(keyBindingId);
         if (keyBinding == null) return;
 
         InputUtil.Key oldKey = ((KeyBindingAccessor) keyBinding).getBoundKey();
-        if (oldKey.getCode() == newKeyCode) return;
+        if (oldKey == newKey) return;
 
         // Remove from old key to key binding, add to new one
         List<KeyBinding> keyToKeyBindings = KEY_TO_KEY_BINDINGS.get(oldKey);
         if (keyToKeyBindings != null) {
             keyToKeyBindings.remove(keyBinding);
         }
-        KEY_TO_KEY_BINDINGS.computeIfAbsent(InputUtil.Type.KEYSYM.createFromCode(newKeyCode), k -> new ArrayList<>()).add(keyBinding);
+        KEY_TO_KEY_BINDINGS.computeIfAbsent(newKey, k -> new ArrayList<>()).add(keyBinding);
     }
 
     public static void removeKeyBinding(UUID keyBindingId) {

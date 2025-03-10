@@ -15,8 +15,8 @@ import java.util.Collection;
 @Mixin(HandledScreen.class)
 public abstract class HandledScreenMixin {
     @Unique
-    private boolean isMouseMatch(String action, KeyBinding instance, int code, Operation<Boolean> original) {
-        Collection<KeyBinding> keyBindings = MultiKeyBindingManager.getKeyBindings(action);
+    private boolean isMouseMatch(KeyBinding instance, int code, Operation<Boolean> original) {
+        Collection<KeyBinding> keyBindings = MultiKeyBindingManager.getKeyBindings(instance.getTranslationKey());
         for (KeyBinding keyBinding : keyBindings) {
             InputUtil.Key boundKey = ((KeyBindingAccessor) keyBinding).getBoundKey();
             if (boundKey.getCategory() == InputUtil.Type.MOUSE && code == boundKey.getCode()) {
@@ -27,8 +27,8 @@ public abstract class HandledScreenMixin {
     }
 
     @Unique
-    private boolean isKeyMatch(String action, KeyBinding instance, int code, int scanCode, Operation<Boolean> original) {
-        Collection<KeyBinding> keyBindings = MultiKeyBindingManager.getKeyBindings(action);
+    private boolean isKeyMatch(KeyBinding instance, int code, int scanCode, Operation<Boolean> original) {
+        Collection<KeyBinding> keyBindings = MultiKeyBindingManager.getKeyBindings(instance.getTranslationKey());
         for (KeyBinding keyBinding : keyBindings) {
             InputUtil.Key boundKey = ((KeyBindingAccessor) keyBinding).getBoundKey();
             if (boundKey.getCategory() == InputUtil.Type.KEYSYM && code == boundKey.getCode()) {
@@ -40,26 +40,22 @@ public abstract class HandledScreenMixin {
 
     @WrapOperation(method = "mouseClicked", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesMouse(I)Z"))
     public boolean onMouseClicked(KeyBinding instance, int code, Operation<Boolean> original) {
-        return isMouseMatch("key.pickItem", instance, code, original);
+        MultiKeyBindingManager.LOGGER.info(instance.getTranslationKey());
+        return isMouseMatch(instance, code, original);
     }
 
     @WrapOperation(method = "mouseReleased", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesMouse(I)Z"))
     public boolean onMouseReleased(KeyBinding instance, int code, Operation<Boolean> original) {
-        return isMouseMatch("key.pickItem", instance, code, original);
+        return isMouseMatch(instance, code, original);
     }
 
-    @WrapOperation(method = "keyPressed", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesKey(II)Z", ordinal = 0))
-    public boolean onInventoryKeyPressed(KeyBinding instance, int code, int scanCode, Operation<Boolean> original) {
-        return isKeyMatch("key.inventory", instance, code, scanCode, original);
+    @WrapOperation(method = "keyPressed", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesKey(II)Z"))
+    public boolean onKeyPressed(KeyBinding instance, int code, int scanCode, Operation<Boolean> original) {
+        return isKeyMatch(instance, code, scanCode, original);
     }
 
-    @WrapOperation(method = "keyPressed", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesKey(II)Z", ordinal = 1))
-    public boolean onPickItemKeyPressed(KeyBinding instance, int code, int scanCode, Operation<Boolean> original) {
-        return isKeyMatch("key.pickItem", instance, code, scanCode, original);
-    }
-
-    @WrapOperation(method = "keyPressed", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesKey(II)Z", ordinal = 2))
-    public boolean onDropItemKeyPressed(KeyBinding instance, int code, int scanCode, Operation<Boolean> original) {
-        return isKeyMatch("key.drop", instance, code, scanCode, original);
+    @WrapOperation(method = "handleHotbarKeyPressed", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesKey(II)Z"))
+    public boolean onHotbarKeyPressed(KeyBinding instance, int code, int scanCode, Operation<Boolean> original) {
+        return isKeyMatch(instance, code, scanCode, original);
     }
 }

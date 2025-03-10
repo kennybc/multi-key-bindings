@@ -100,7 +100,7 @@ public class MultiKeyBindingManager implements ClientModInitializer {
                 JsonObject keyBindingJson = new JsonObject();
                 keyBindingJson.addProperty("id", entry.getKey().toString());
                 keyBindingJson.addProperty("action", entry.getValue().getTranslationKey());
-                keyBindingJson.addProperty("keyCode", ((KeyBindingAccessor) entry.getValue()).getBoundKey().getCode());
+                keyBindingJson.addProperty("key", ((KeyBindingAccessor) entry.getValue()).getBoundKey().toString());
 
                 keyBindingsArray.add(keyBindingJson);
             }
@@ -125,9 +125,9 @@ public class MultiKeyBindingManager implements ClientModInitializer {
                 JsonObject keyBindingJson = element.getAsJsonObject();
                 UUID id = UUID.fromString(keyBindingJson.get("id").getAsString());
                 String action = keyBindingJson.get("action").getAsString();
-                int keyCode = keyBindingJson.get("keyCode").getAsInt();
+                String translationKey = keyBindingJson.get("key").getAsString();
 
-                InputUtil.Key key = InputUtil.Type.KEYSYM.createFromCode(keyCode);
+                InputUtil.Key key = InputUtil.fromTranslationKey(translationKey);
                 KeyBinding keyBinding = new KeyBinding(action, -1, id.toString());
                 keyBinding.setBoundKey(key);
 

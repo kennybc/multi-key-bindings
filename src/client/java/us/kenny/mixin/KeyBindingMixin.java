@@ -21,22 +21,8 @@ public abstract class KeyBindingMixin {
     @Shadow
     public abstract String getTranslationKey();
 
-    @Final
-    @Shadow
-    private String translationKey;
-
-    @Shadow
-    public abstract InputUtil.Key getDefaultKey();
-
     @Shadow
     public abstract String getCategory();
-
-    @Shadow
-    private int timesPressed;
-
-    @Shadow
-    @Final
-    private static Map<InputUtil.Key, KeyBinding> KEY_TO_BINDINGS;
 
 
     /**
@@ -70,8 +56,6 @@ public abstract class KeyBindingMixin {
     @Inject(method = "onKeyPressed", at = @At("TAIL"))
     private static void onOnKeyPressed(InputUtil.Key key, CallbackInfo ci) {
         Collection<KeyBinding> keyBindings = MultiKeyBindingManager.getKeyBindings(key);
-        MultiKeyBindingManager.LOGGER.info(keyBindings.toString());
-        MultiKeyBindingManager.LOGGER.info(String.valueOf(key.getCode()));
         for (KeyBinding keyBinding : keyBindings) {
             if (keyBinding != null) {
                 KeyBinding parentKeyBinding = KeyBindingAccessor.getKeysByIdMap().get(keyBinding.getTranslationKey().substring(6));

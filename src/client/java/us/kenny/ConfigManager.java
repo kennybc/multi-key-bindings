@@ -19,27 +19,9 @@ import java.util.Map;
 import java.util.UUID;
 
 public class ConfigManager {
-    public static final String VERSION = System.getProperty("version");
+    public static final int CONFIG_VERSION = 2;
     private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("multi-key-bindings.json");
     private static final Gson GSON = new Gson();
-
-    public static boolean isOutdated(String version) {
-        String[] parts1 = version.split("\\.");
-        String[] parts2 = VERSION.split("\\.");
-
-        int length = Math.max(parts1.length, parts2.length);
-        for (int i = 0; i < length; i++) {
-            int num1 = i < parts1.length ? Integer.parseInt(parts1[i]) : 0;
-            int num2 = i < parts2.length ? Integer.parseInt(parts2[i]) : 0;
-
-            if (num1 > num2) {
-                return true;
-            } else if (num1 < num2) {
-                return false;
-            }
-        }
-        return false;
-    }
 
     public static void saveConfigFile() {
         try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
@@ -56,7 +38,7 @@ public class ConfigManager {
                 keyBindingsArray.add(keyBindingJson);
             }
             json.add("bindings", keyBindingsArray);
-            json.addProperty("version", VERSION);
+            json.addProperty("version", CONFIG_VERSION);
 
             GSON.toJson(json, writer);
         } catch (IOException e) {
@@ -68,15 +50,20 @@ public class ConfigManager {
         if (!Files.exists(CONFIG_PATH)) return;
 
         MultiKeyBindingManager.isLoading = true;
+        boolean migrated = false;
+
         try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
             JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json == null || !json.has("keyBindings")) return;
+            if (json == null) return;
 
-            String version = json.has("config_version") ? json.get("config_version").getAsString() : "1.0.0";
-            if (isOutdated(version)) {
-                MultiKeyBindingManager.LOGGER.info("Config version outdated (found v{}, expected v{}). Upgrading...", version, VERSION);
+            int version = json.has("config_version") ? json.get("config_version").getAsInt() : 1;
+            if (version < CONFIG_VERSION) {
+                MultiKeyBindingManager.LOGGER.info("Config version outdated (found v{}, expected v{}). Upgrading...", version, CONFIG_VERSION);
                 json = migrateConfig(json, version);
+                migrated = true;
             }
+
+            if (!json.has("bindings")) return;
 
             JsonArray keyBindingsArray = json.getAsJsonArray("bindings");
             for (JsonElement element : keyBindingsArray) {
@@ -87,6 +74,14 @@ public class ConfigManager {
 
                 MultiKeyBindingManager.addKeyBindingToMap(action, translationKey, id);
             }
+
+            if (migrated) {
+                try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
+                    GSON.toJson(json, writer);
+                } catch (IOException e) {
+                    MultiKeyBindingManager.LOGGER.error("Failed to save migrated keybindings config", e);
+                }
+            }
         } catch (IOException e) {
             MultiKeyBindingManager.LOGGER.error("Failed to load config", e);
         } finally {
@@ -94,12 +89,12 @@ public class ConfigManager {
         }
     }
 
-    private static JsonObject migrateConfig(JsonObject json, String version) {
+    private static JsonObject migrateConfig(JsonObject json, int version) {
         JsonObject newConfig = new JsonObject();
-        newConfig.addProperty("version", VERSION);
+        newConfig.addProperty("version", CONFIG_VERSION);
         JsonArray newKeyBindings = new JsonArray();
 
-        JsonArray oldKeyBindings = json.getAsJsonArray(version.equals("1.0.0") ? "keyBindings" : "bindings");
+        JsonArray oldKeyBindings = json.getAsJsonArray(version == 1 ? "keyBindings" : "bindings");
         for (JsonElement element : oldKeyBindings) {
             JsonObject oldBinding = element.getAsJsonObject();
             JsonObject newBinding = new JsonObject();
@@ -107,7 +102,7 @@ public class ConfigManager {
             newBinding.addProperty("id", oldBinding.get("id").getAsString());
             newBinding.addProperty("action", oldBinding.get("action").getAsString());
 
-            if (version.equals("1.0.0") && oldBinding.has("keyCode")) {
+            if (version == 1 && oldBinding.has("keyCode")) {
                 int keyCode = oldBinding.get("keyCode").getAsInt();
                 String keyName = convertKeyCodeToKeyName(keyCode);
                 newBinding.addProperty("key", keyName);
@@ -118,21 +113,18 @@ public class ConfigManager {
             newKeyBindings.add(newBinding);
         }
 
-        newConfig.add("keyBindings", newKeyBindings);
+        newConfig.add("bindings", newKeyBindings);
         return newConfig;
     }
 
 
     private static String convertKeyCodeToKeyName(int keyCode) {
-        InputUtil.Key key = InputUtil.fromKeyCode(keyCode, 0);
-
-        if (key.getCategory() == InputUtil.Type.KEYSYM) {
-            return "key.keyboard." + key.getTranslationKey().replace("key.keyboard.", "");
-        } else if (key.getCategory() == InputUtil.Type.MOUSE) {
+        if (keyCode <= 6) {
             return "key.mouse." + getMouseButtonName(keyCode);
+        } else {
+            InputUtil.Key key = InputUtil.fromKeyCode(keyCode, 0);
+            return key.getTranslationKey();
         }
-
-        return "key.unknown";
     }
 
     private static String getMouseButtonName(int button) {

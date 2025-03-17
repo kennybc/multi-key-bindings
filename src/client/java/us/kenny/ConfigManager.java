@@ -119,24 +119,7 @@ public class ConfigManager {
 
 
     private static String convertKeyCodeToKeyName(int keyCode) {
-        if (keyCode <= 6) {
-            return "key.mouse." + getMouseButtonName(keyCode);
-        } else {
-            InputUtil.Key key = InputUtil.fromKeyCode(keyCode, 0);
-            return key.getTranslationKey();
-        }
-    }
-
-    private static String getMouseButtonName(int button) {
-        return switch (button) {
-            case 0 -> "left";
-            case 1 -> "right";
-            case 2 -> "middle";
-            case 3 -> "button.4";
-            case 4 -> "button.5";
-            case 5 -> "button.6";
-            case 6 -> "button.7";
-            default -> "button." + (button + 1);
-        };
+        InputUtil.Type keyType = keyCode <= 10 ? InputUtil.Type.MOUSE : InputUtil.Type.KEYSYM;
+        return keyType.createFromCode(keyCode).getTranslationKey();
     }
 }

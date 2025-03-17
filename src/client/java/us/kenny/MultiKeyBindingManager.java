@@ -1,10 +1,6 @@
 package us.kenny;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.option.KeyBinding;
@@ -13,39 +9,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import us.kenny.mixin.KeyBindingAccessor;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
 public class MultiKeyBindingManager implements ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("multi-key-bindings");
-    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("multi-key-bindings.json");
-    private static final Gson GSON = new Gson();
 
     private static final Map<String, List<KeyBinding>> ACTION_TO_KEY_BINDINGS = new HashMap<>();
     private static final Map<InputUtil.Key, List<KeyBinding>> KEY_TO_KEY_BINDINGS = new HashMap<>();
     private static final Map<UUID, KeyBinding> ID_TO_KEY_BINDING = new HashMap<>();
 
-    private static boolean isLoading = false;
-
-    public static boolean isLoading() {
-        return isLoading;
-    }
+    public static boolean isLoading = false;
 
     public static KeyBinding addKeyBinding(String action, String translationKey) {
         UUID newId = UUID.randomUUID();
         action = "multi." + action;
 
         KeyBinding keyBinding = addKeyBindingToMap(action, translationKey, newId);
-        save();
+        ConfigManager.saveConfigFile();
 
         return keyBinding;
     }
 
-    private static KeyBinding addKeyBindingToMap(String action, String translationKey, UUID newId) {
+    public static KeyBinding addKeyBindingToMap(String action, String translationKey, UUID newId) {
         InputUtil.Key key = InputUtil.fromTranslationKey(translationKey);
         KeyBinding keyBinding = new KeyBinding(action, -1, newId.toString());
         keyBinding.setBoundKey(key);
@@ -63,6 +49,10 @@ public class MultiKeyBindingManager implements ClientModInitializer {
 
     public static Collection<KeyBinding> getKeyBindings(InputUtil.Key key) {
         return KEY_TO_KEY_BINDINGS.getOrDefault(key, new ArrayList<>());
+    }
+
+    public static Set<Map.Entry<UUID, KeyBinding>> getKeyBindings() {
+        return ID_TO_KEY_BINDING.entrySet();
     }
 
     public static void setKeyBinding(UUID keyBindingId, InputUtil.Key newKey) {
@@ -92,57 +82,11 @@ public class MultiKeyBindingManager implements ClientModInitializer {
                 keyToKeyBindings.remove(keyBinding);
             }
         }
-        save();
-    }
-
-    public static void save() {
-        try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
-            JsonObject json = new JsonObject();
-
-            // Save ID to KeyBinding
-            JsonArray keyBindingsArray = new JsonArray();
-            for (Map.Entry<UUID, KeyBinding> entry : ID_TO_KEY_BINDING.entrySet()) {
-                JsonObject keyBindingJson = new JsonObject();
-                keyBindingJson.addProperty("id", entry.getKey().toString());
-                keyBindingJson.addProperty("action", entry.getValue().getTranslationKey());
-                keyBindingJson.addProperty("key", ((KeyBindingAccessor) entry.getValue()).getBoundKey().toString());
-
-                keyBindingsArray.add(keyBindingJson);
-            }
-            json.add("keyBindings", keyBindingsArray);
-
-            GSON.toJson(json, writer);
-        } catch (IOException e) {
-            LOGGER.error("Failed to save keybindings config", e);
-        }
-    }
-
-    private static void load() {
-        if (!Files.exists(CONFIG_PATH)) return;
-
-        isLoading = true;
-        try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
-            JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json == null || !json.has("keyBindings")) return;
-
-            JsonArray keyBindingsArray = json.getAsJsonArray("keyBindings");
-            for (JsonElement element : keyBindingsArray) {
-                JsonObject keyBindingJson = element.getAsJsonObject();
-                UUID id = UUID.fromString(keyBindingJson.get("id").getAsString());
-                String action = keyBindingJson.get("action").getAsString();
-                String translationKey = keyBindingJson.get("key").getAsString();
-
-                addKeyBindingToMap(action, translationKey, id);
-            }
-        } catch (IOException e) {
-            LOGGER.error("Failed to load config", e);
-        } finally {
-            isLoading = false;
-        }
+        ConfigManager.saveConfigFile();
     }
 
     @Override
     public void onInitializeClient() {
-        load();
+        ConfigManager.loadConfigFile();
     }
 }

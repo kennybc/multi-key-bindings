@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import us.kenny.ConfigManager;
 import us.kenny.MultiKeyBindingManager;
 
 import java.util.Collection;
@@ -72,7 +73,7 @@ public abstract class KeyBindingMixin {
      */
     @Inject(method = "setBoundKey", at = @At("HEAD"))
     private void onSetBoundKey(InputUtil.Key boundKey, CallbackInfo ci) {
-        if (getTranslationKey().startsWith("multi.") && !MultiKeyBindingManager.isLoading()) {
+        if (getTranslationKey().startsWith("multi.") && !MultiKeyBindingManager.isLoading) {
             MultiKeyBindingManager.setKeyBinding(UUID.fromString(getCategory()), boundKey);
         }
     }
@@ -85,8 +86,8 @@ public abstract class KeyBindingMixin {
      */
     @Inject(method = "setBoundKey", at = @At("TAIL"))
     private void afterSetBoundKey(InputUtil.Key boundKey, CallbackInfo ci) {
-        if (getTranslationKey().startsWith("multi.") && !MultiKeyBindingManager.isLoading()) {
-            MultiKeyBindingManager.save();
+        if (getTranslationKey().startsWith("multi.") && !MultiKeyBindingManager.isLoading) {
+            ConfigManager.saveConfigFile();
         }
     }
 }

@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import net.minecraft.client.option.KeyBinding;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.util.InputUtil;
+import org.jetbrains.annotations.NotNull;
 import us.kenny.mixin.KeyBindingAccessor;
 
 
@@ -23,22 +24,27 @@ public class ConfigManager {
     private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("multi-key-bindings.json");
     private static final Gson GSON = new Gson();
 
+    private static JsonArray getFormattedKeyBindings() {
+        JsonArray keyBindingsArray = new JsonArray();
+
+        for (Map.Entry<UUID, KeyBinding> entry : MultiKeyBindingManager.getKeyBindings()) {
+            JsonObject keyBindingJson = new JsonObject();
+            keyBindingJson.addProperty("id", entry.getKey().toString());
+            keyBindingJson.addProperty("action", entry.getValue().getTranslationKey());
+            keyBindingJson.addProperty("key", ((KeyBindingAccessor) entry.getValue()).getBoundKey().toString());
+
+            keyBindingsArray.add(keyBindingJson);
+        }
+        return keyBindingsArray;
+    }
+
     public static void saveConfigFile() {
         try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
             JsonObject json = new JsonObject();
+            JsonArray keyBindingsArray = getFormattedKeyBindings();
 
-            // Save ID to KeyBinding
-            JsonArray keyBindingsArray = new JsonArray();
-            for (Map.Entry<UUID, KeyBinding> entry : MultiKeyBindingManager.getKeyBindings()) {
-                JsonObject keyBindingJson = new JsonObject();
-                keyBindingJson.addProperty("id", entry.getKey().toString());
-                keyBindingJson.addProperty("action", entry.getValue().getTranslationKey());
-                keyBindingJson.addProperty("key", ((KeyBindingAccessor) entry.getValue()).getBoundKey().toString());
-
-                keyBindingsArray.add(keyBindingJson);
-            }
+            json.addProperty("config_version", CONFIG_VERSION);
             json.add("bindings", keyBindingsArray);
-            json.addProperty("version", CONFIG_VERSION);
 
             GSON.toJson(json, writer);
         } catch (IOException e) {
@@ -91,7 +97,7 @@ public class ConfigManager {
 
     private static JsonObject migrateConfig(JsonObject json, int version) {
         JsonObject newConfig = new JsonObject();
-        newConfig.addProperty("version", CONFIG_VERSION);
+        newConfig.addProperty("config_version", CONFIG_VERSION);
         JsonArray newKeyBindings = new JsonArray();
 
         JsonArray oldKeyBindings = json.getAsJsonArray(version == 1 ? "keyBindings" : "bindings");

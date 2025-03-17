@@ -7,9 +7,7 @@ import com.google.gson.JsonObject;
 import net.minecraft.client.option.KeyBinding;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.util.InputUtil;
-import org.jetbrains.annotations.NotNull;
 import us.kenny.mixin.KeyBindingAccessor;
-
 
 import java.io.IOException;
 import java.io.Reader;
@@ -24,20 +22,9 @@ public class ConfigManager {
     private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("multi-key-bindings.json");
     private static final Gson GSON = new Gson();
 
-    private static JsonArray getFormattedKeyBindings() {
-        JsonArray keyBindingsArray = new JsonArray();
-
-        for (Map.Entry<UUID, KeyBinding> entry : MultiKeyBindingManager.getKeyBindings()) {
-            JsonObject keyBindingJson = new JsonObject();
-            keyBindingJson.addProperty("id", entry.getKey().toString());
-            keyBindingJson.addProperty("action", entry.getValue().getTranslationKey());
-            keyBindingJson.addProperty("key", ((KeyBindingAccessor) entry.getValue()).getBoundKey().toString());
-
-            keyBindingsArray.add(keyBindingJson);
-        }
-        return keyBindingsArray;
-    }
-
+    /**
+     * Save all custom key bindings to a config file.
+     */
     public static void saveConfigFile() {
         try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
             JsonObject json = new JsonObject();
@@ -52,6 +39,10 @@ public class ConfigManager {
         }
     }
 
+    /**
+     * Load custom key bindings from a config file. If config version is outdated,
+     * attempt to migrate to latest config file format.
+     */
     public static void loadConfigFile() {
         if (!Files.exists(CONFIG_PATH)) return;
 
@@ -78,7 +69,7 @@ public class ConfigManager {
                 String action = keyBindingJson.get("action").getAsString();
                 String translationKey = keyBindingJson.get("key").getAsString();
 
-                MultiKeyBindingManager.addKeyBindingToMap(action, translationKey, id);
+                MultiKeyBindingManager.addKeyBinding(action, translationKey, id);
             }
 
             if (migrated) {
@@ -95,6 +86,9 @@ public class ConfigManager {
         }
     }
 
+    /**
+     * Migrate a config JSON object to latest format.
+     */
     private static JsonObject migrateConfig(JsonObject json, int version) {
         JsonObject newConfig = new JsonObject();
         newConfig.addProperty("config_version", CONFIG_VERSION);
@@ -123,7 +117,28 @@ public class ConfigManager {
         return newConfig;
     }
 
+    /**
+     * Get all key bindings and format them into a JSON object for storage.
+     */
+    private static JsonArray getFormattedKeyBindings() {
+        JsonArray keyBindingsArray = new JsonArray();
 
+        for (Map.Entry<UUID, KeyBinding> entry : MultiKeyBindingManager.getKeyBindings()) {
+            JsonObject keyBindingJson = new JsonObject();
+            keyBindingJson.addProperty("id", entry.getKey().toString());
+            keyBindingJson.addProperty("action", entry.getValue().getTranslationKey());
+            keyBindingJson.addProperty("key", ((KeyBindingAccessor) entry.getValue()).getBoundKey().toString());
+
+            keyBindingsArray.add(keyBindingJson);
+        }
+        return keyBindingsArray;
+    }
+
+    /**
+     * Convert a keyCode to a key name (e.g. 2 -> key.mouse.middle).
+     *
+     * @param keyCode The key code to convert.
+     */
     private static String convertKeyCodeToKeyName(int keyCode) {
         InputUtil.Type keyType = keyCode <= 10 ? InputUtil.Type.MOUSE : InputUtil.Type.KEYSYM;
         return keyType.createFromCode(keyCode).getTranslationKey();

@@ -46,7 +46,7 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
      */
     @Unique
     private void createCustomKeyBinding() {
-        KeyBinding keyBinding = MultiKeyBindingManager.addKeyBinding(binding.getTranslationKey(), "key.keyboard.unknown");
+        KeyBinding keyBinding = MultiKeyBindingManager.addKeyBinding("multi." + binding.getTranslationKey(), "key.keyboard.unknown");
 
         KeyBindingEntry keyBindingEntry = KeyBindingEntryAccessor.create(controlsListWidget, keyBinding, Text.of("     |"));
         controlsListWidget.children().add(controlsListWidget.children().indexOf(this.self) + 1, keyBindingEntry);
@@ -113,7 +113,9 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
         addKeyBindingButton.render(context, mouseX, mouseY, tickDelta);
     }
 
-    // Override hardcoded lists that enable our custom buttons to be interacted with
+    /**
+     * The following override hardcoded lists that enable our custom buttons to be interacted with.
+     */
     @Override
     public List<? extends Element> children() {
         return ImmutableList.of(this.editButton, this.resetButton, this.addKeyBindingButton);

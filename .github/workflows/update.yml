@@ -1,0 +1,103 @@
+name: Update versions
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-versions:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq xmlstarlet
+
+      - name: Set Git identity
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      - name: Fetch stable Minecraft versions (1.20.x and 1.21.x)
+        id: fetch-versions
+        run: |
+          VERSIONS=$(curl -s https://meta.fabricmc.net/v2/versions/game \
+            | jq -r '[.[] | select(.stable == true and (.version | test("^1\\.(20|21)"))) | .version] | join(" ")')
+
+          echo "VERSIONS<<EOF" >> $GITHUB_ENV
+          echo "$VERSIONS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Get existing version branches
+        run: |
+          BRANCHES=$(git branch -r | sed 's|origin/||' | grep -v HEAD | xargs)
+
+          echo "EXISTING_BRANCHES<<EOF" >> $GITHUB_ENV
+          echo "$BRANCHES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Find missing versions
+        id: missing
+        run: |
+          missing=()
+          for v in $VERSIONS; do
+            if ! echo "$EXISTING_BRANCHES" | tr ' ' '\n' | grep -qx "$v"; then
+              missing+=("$v")
+            fi
+          done
+
+          echo "MISSING<<EOF" >> $GITHUB_ENV
+          echo "${missing[*]}" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          echo "Missing versions: ${missing[*]}"
+
+      - name: Create branches for missing versions
+        if: env.MISSING != ''
+        run: |
+          loom_version="1.11-SNAPSHOT"
+
+          for v in $MISSING; do
+            echo "Creating branch $v"
+            git checkout main
+            git pull
+            git checkout -b "$v"
+
+            # fetch yarn mappings
+            yarn_mappings=$(curl -s "https://meta.fabricmc.net/v2/versions/yarn/$v" \
+              | jq -r '.[0].version')
+
+            # fetch fabric loader version
+            loader_version=$(curl -s "https://meta.fabricmc.net/v2/versions/loader" \
+              | jq -r '.[0].version')
+
+            # fetch fabric API version
+            fabric_version=$(curl -s https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml \
+              | xmlstarlet sel -t -v "/metadata/versioning/versions/version" -n \
+              | grep "+$v\$" \
+              | sort -V \
+              | tail -n1)
+
+            echo "Using yarn=$yarn_mappings, loader=$loader_version, fabric=$fabric_version, loom=$loom_version"
+
+            # update gradle.properties
+            sed -i "s/^minecraft_version=.*/minecraft_version=$v/" gradle.properties
+            sed -i "s/^yarn_mappings=.*/yarn_mappings=$yarn_mappings/" gradle.properties
+            sed -i "s/^loader_version=.*/loader_version=$loader_version/" gradle.properties
+            sed -i "s/^loom_version=.*/loom_version=$loom_version/" gradle.properties
+            sed -i "s/^fabric_version=.*/fabric_version=$fabric_version/" gradle.properties
+            sed -i "s/^mod_version=.*/mod_version=1.0.2+$v/" gradle.properties
+
+            git add gradle.properties
+            git commit -m "publish $v"
+            git push origin "$v"
+          done

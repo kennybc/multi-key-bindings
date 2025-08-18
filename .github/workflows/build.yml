@@ -3,7 +3,7 @@
 # certain platforms or Java versions, and provides a first line of defence
 # against bad commits.
 
-name: build
+name: Build
 on: [pull_request, push]
 
 jobs:
@@ -12,8 +12,8 @@ jobs:
       matrix:
         # Use these Java versions
         java: [
-          21,    # Current Java LTS
-        ]
+            21, # Current Java LTS
+          ]
     runs-on: ubuntu-22.04
     steps:
       - name: checkout repository
@@ -24,7 +24,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
-          distribution: 'microsoft'
+          distribution: "microsoft"
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
       - name: build

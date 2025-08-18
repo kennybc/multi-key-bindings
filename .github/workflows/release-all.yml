@@ -72,6 +72,6 @@ jobs:
             ./gradlew build
 
             # Attach the build mod jar
-            JAR_PATH=$(ls build/libs/*.jar | grep -v 'sources' | head -n1)
+            JAR_PATH=$(ls build/libs/*"$MOD_VERSION"*.jar | grep -v 'sources' | head -n1)
             gh release upload "$MOD_VERSION" "$JAR_PATH" --clobber
           done

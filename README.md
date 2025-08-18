@@ -9,8 +9,8 @@ This mod adds extra functionality to the native key binds screen. Simply click t
 
 ## Versions and Compatibility
 
-Created for Minecraft version 1.21.4, tested on versions 1.21+
-Most recently tested and working on 1.21.6!
+Created for Minecraft version 1.21.4, tested on versions 1.20+ <br>
+Most recently tested and working on 1.21.8!
 
 <br>
 

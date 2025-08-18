@@ -97,7 +97,10 @@ jobs:
             sed -i "s/^fabric_version=.*/fabric_version=$fabric_version/" gradle.properties
             sed -i "s/^mod_version=.*/mod_version=1.0.2+$v/" gradle.properties
 
-            git add gradle.properties
+            # update fabric.mod.json
+            jq --arg mc "$v" '.depends.minecraft = $mc' src/main/resources/fabric.mod.json > tmp.json && mv tmp.json src/main/resources/fabric.mod.json
+
+            git add gradle.properties src/main/resources/fabric.mod.json
             git commit -m "publish $v"
             git push origin "$v"
           done

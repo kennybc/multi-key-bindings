@@ -1,4 +1,4 @@
-name: Release all branches
+name: Release all versions
 
 permissions:
   contents: write

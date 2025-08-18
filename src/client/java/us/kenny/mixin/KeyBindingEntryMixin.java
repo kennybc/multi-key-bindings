@@ -106,8 +106,8 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
     private void onRender(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta, CallbackInfo ci) {
         // Mimic the positioning and layout of the existing buttons
         int scrollbarX = controlsListWidget.getRowRight() + 6 + 2;
-        int buttonX = scrollbarX - 165; // 5 wide gap between buttons, 20 wide "+" button
-        int buttonY = y - 2; // Align with the existing buttons
+        int buttonX = scrollbarX - 180; // 5 wide gap between buttons, 20 wide "+" button
+        int buttonY = y; // Align with the existing buttons
 
         addKeyBindingButton.setPosition(buttonX, buttonY);
         addKeyBindingButton.render(context, mouseX, mouseY, tickDelta);

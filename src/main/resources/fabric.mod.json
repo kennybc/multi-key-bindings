@@ -21,7 +21,11 @@
   },
   "mixins": [
     {
-      "config": "multi-key-bindings.client.mixins.json",
+      "config": "multi-key-bindings.controlling.mixins.json",
+      "environment": "client"
+    },
+    {
+      "config": "multi-key-bindings.mixins.json",
       "environment": "client"
     }
   ],

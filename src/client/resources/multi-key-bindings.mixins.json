@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "us.kenny.mixin.controlling",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "us.kenny.mixin.controlling.ControllingMixinPlugin",
+  "client": [
+    "NewKeyBindsListMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

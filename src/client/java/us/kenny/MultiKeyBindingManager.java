@@ -9,14 +9,10 @@ import us.kenny.mixin.KeyBindingAccessor;
 
 import java.util.*;
 
-public class MultiKeyBindingManager implements ClientModInitializer {
-    public static final Logger LOGGER = LoggerFactory.getLogger("multi-key-bindings");
-
+public class MultiKeyBindingManager {
     private static final Map<String, List<KeyBinding>> ACTION_TO_KEY_BINDINGS = new HashMap<>();
     private static final Map<InputUtil.Key, List<KeyBinding>> KEY_TO_KEY_BINDINGS = new HashMap<>();
     private static final Map<UUID, KeyBinding> ID_TO_KEY_BINDING = new HashMap<>();
-
-    public static boolean isLoading = false;
 
     /**
      * Create a new key binding and save it to the config file.
@@ -113,10 +109,5 @@ public class MultiKeyBindingManager implements ClientModInitializer {
             }
         }
         ConfigManager.saveConfigFile();
-    }
-
-    @Override
-    public void onInitializeClient() {
-        ConfigManager.loadConfigFile();
     }
 }

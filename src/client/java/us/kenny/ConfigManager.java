@@ -22,6 +22,8 @@ public class ConfigManager {
     private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("multi-key-bindings.json");
     private static final Gson GSON = new Gson();
 
+    public static boolean isLoading = false;
+
     /**
      * Save all custom key bindings to a config file.
      */
@@ -35,7 +37,7 @@ public class ConfigManager {
 
             GSON.toJson(json, writer);
         } catch (IOException e) {
-            MultiKeyBindingManager.LOGGER.error("Failed to save keybindings config", e);
+            MultiKeyBindingClient.LOGGER.error("Failed to save keybindings config", e);
         }
     }
 
@@ -46,7 +48,6 @@ public class ConfigManager {
     public static void loadConfigFile() {
         if (!Files.exists(CONFIG_PATH)) return;
 
-        MultiKeyBindingManager.isLoading = true;
         boolean migrated = false;
 
         try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
@@ -55,7 +56,7 @@ public class ConfigManager {
 
             int version = json.has("config_version") ? json.get("config_version").getAsInt() : 1;
             if (version < CONFIG_VERSION) {
-                MultiKeyBindingManager.LOGGER.info("Config version outdated (found v{}, expected v{}). Upgrading...", version, CONFIG_VERSION);
+                MultiKeyBindingClient.LOGGER.info("Config version outdated (found v{}, expected v{}). Upgrading...", version, CONFIG_VERSION);
                 json = migrateConfig(json, version);
                 migrated = true;
             }
@@ -76,13 +77,13 @@ public class ConfigManager {
                 try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
                     GSON.toJson(json, writer);
                 } catch (IOException e) {
-                    MultiKeyBindingManager.LOGGER.error("Failed to save migrated keybindings config", e);
+                    MultiKeyBindingClient.LOGGER.error("Failed to save migrated keybindings config", e);
                 }
             }
         } catch (IOException e) {
-            MultiKeyBindingManager.LOGGER.error("Failed to load config", e);
+            MultiKeyBindingClient.LOGGER.error("Failed to load config", e);
         } finally {
-            MultiKeyBindingManager.isLoading = false;
+            isLoading = false;
         }
     }
 

@@ -61,7 +61,6 @@ public abstract class HandledScreenMixin {
      */
     @WrapOperation(method = "mouseClicked", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesMouse(I)Z"))
     public boolean onMouseClicked(KeyBinding instance, int code, Operation<Boolean> original) {
-        MultiKeyBindingManager.LOGGER.info(instance.getTranslationKey());
         return isMouseMatch(instance, code, original);
     }
 

@@ -73,7 +73,7 @@ public abstract class KeyBindingMixin {
      */
     @Inject(method = "setBoundKey", at = @At("HEAD"))
     private void onSetBoundKey(InputUtil.Key boundKey, CallbackInfo ci) {
-        if (getTranslationKey().startsWith("multi.") && !MultiKeyBindingManager.isLoading) {
+        if (getTranslationKey().startsWith("multi.") && !ConfigManager.isLoading) {
             MultiKeyBindingManager.setKeyBinding(UUID.fromString(getCategory()), boundKey);
         }
     }
@@ -86,7 +86,7 @@ public abstract class KeyBindingMixin {
      */
     @Inject(method = "setBoundKey", at = @At("TAIL"))
     private void afterSetBoundKey(InputUtil.Key boundKey, CallbackInfo ci) {
-        if (getTranslationKey().startsWith("multi.") && !MultiKeyBindingManager.isLoading) {
+        if (getTranslationKey().startsWith("multi.") && !ConfigManager.isLoading) {
             ConfigManager.saveConfigFile();
         }
     }

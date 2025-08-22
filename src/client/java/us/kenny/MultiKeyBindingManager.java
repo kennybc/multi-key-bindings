@@ -1,13 +1,16 @@
 package us.kenny;
 
-import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import us.kenny.mixin.KeyBindingAccessor;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 public class MultiKeyBindingManager {
     private static final Map<String, List<KeyBinding>> ACTION_TO_KEY_BINDINGS = new HashMap<>();
@@ -17,7 +20,7 @@ public class MultiKeyBindingManager {
     /**
      * Create a new key binding and save it to the config file.
      *
-     * @see MultiKeyBindingManager#addKeyBinding(String, String, UUID)
+     * @see us.kenny.MultiKeyBindingManager#addKeyBinding(String, String, UUID)
      */
     public static KeyBinding addKeyBinding(String action, String translationKey) {
         KeyBinding keyBinding = addKeyBinding(action, translationKey, UUID.randomUUID());
@@ -30,7 +33,8 @@ public class MultiKeyBindingManager {
      * Create a new key binding and add it directly to the binding maps.
      *
      * @param action         The name of the in-game action.
-     * @param translationKey The string representing the bound key (e.g. "key.keyboard.w").
+     * @param translationKey The string representing the bound key (e.g.
+     *                       "key.keyboard.w").
      * @param newId          The ID to set the binding to.
      */
     public static KeyBinding addKeyBinding(String action, String translationKey, UUID newId) {
@@ -70,18 +74,22 @@ public class MultiKeyBindingManager {
     /**
      * Set an existing custom key binding to a new key.
      * -----
-     * NOTE: This intentionally does not save the config as that must be done reactively to prevent recursive
-     * behavior.
+     * NOTE: This intentionally does not save the config as that must be done
+     * reactively to prevent recursive behavior.
+     * 
+     * @see us.kenny.mixin.KeyBindingMixin#afterSetBoundKey
      *
      * @param keyBindingId The UUID of the key binding to update.
      * @param newKey       The new key to associate the binding with.
      */
     public static void setKeyBinding(UUID keyBindingId, InputUtil.Key newKey) {
         KeyBinding keyBinding = ID_TO_KEY_BINDING.get(keyBindingId);
-        if (keyBinding == null) return;
+        if (keyBinding == null)
+            return;
 
         InputUtil.Key oldKey = ((KeyBindingAccessor) keyBinding).getBoundKey();
-        if (oldKey == newKey) return;
+        if (oldKey == newKey)
+            return;
 
         // Remove from old key to key binding, add to new one
         List<KeyBinding> keyToKeyBindings = KEY_TO_KEY_BINDINGS.get(oldKey);
@@ -103,7 +111,8 @@ public class MultiKeyBindingManager {
             if (actionToKeyBindings != null) {
                 actionToKeyBindings.remove(keyBinding);
             }
-            List<KeyBinding> keyToKeyBindings = KEY_TO_KEY_BINDINGS.get(((KeyBindingAccessor) keyBinding).getBoundKey());
+            List<KeyBinding> keyToKeyBindings = KEY_TO_KEY_BINDINGS
+                    .get(((KeyBindingAccessor) keyBinding).getBoundKey());
             if (keyToKeyBindings != null) {
                 keyToKeyBindings.remove(keyBinding);
             }

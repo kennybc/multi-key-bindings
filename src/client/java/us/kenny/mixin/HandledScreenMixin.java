@@ -21,7 +21,8 @@ public abstract class HandledScreenMixin {
      *
      * @param instance The key binding we are testing against.
      * @param code     The key code we are testing.
-     * @param original The original operation we are wrapping; call the original if we don't detect a match.
+     * @param original The original operation we are wrapping; call the original if
+     *                 we don't detect a match.
      */
     @Unique
     private boolean isMouseMatch(KeyBinding instance, int code, Operation<Boolean> original) {
@@ -41,7 +42,8 @@ public abstract class HandledScreenMixin {
      *
      * @param instance The key binding we are testing against.
      * @param code     The key code we are testing.
-     * @param original The original operation we are wrapping; call the original if we don't detect a match.
+     * @param original The original operation we are wrapping; call the original if
+     *                 we don't detect a match.
      */
     @Unique
     private boolean isKeyMatch(KeyBinding instance, int code, int scanCode, Operation<Boolean> original) {
@@ -56,7 +58,8 @@ public abstract class HandledScreenMixin {
     }
 
     /**
-     * The following WrapOperations wrap existing checks on key/mouse state in order to check if any custom
+     * The following WrapOperations wrap existing checks on key/mouse state in order
+     * to check if any custom
      * key/mouse binds are activated
      */
     @WrapOperation(method = "mouseClicked", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesMouse(I)Z"))

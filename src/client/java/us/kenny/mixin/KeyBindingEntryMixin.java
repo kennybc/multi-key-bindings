@@ -42,13 +42,16 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
     private KeyBindingEntry self;
 
     /**
-     * Register the new binding in our manager and build a widget (KeyBindingEntry) for it.
+     * Register the new binding in our manager and build a widget (KeyBindingEntry)
+     * for it.
      */
     @Unique
     private void createCustomKeyBinding() {
-        KeyBinding keyBinding = MultiKeyBindingManager.addKeyBinding("multi." + binding.getTranslationKey(), "key.keyboard.unknown");
+        KeyBinding keyBinding = MultiKeyBindingManager.addKeyBinding("multi." + binding.getTranslationKey(),
+                "key.keyboard.unknown");
 
-        KeyBindingEntry keyBindingEntry = KeyBindingEntryAccessor.create(controlsListWidget, keyBinding, Text.of("     |"));
+        KeyBindingEntry keyBindingEntry = KeyBindingEntryAccessor.create(controlsListWidget, keyBinding,
+                Text.of("     |"));
         controlsListWidget.children().add(controlsListWidget.children().indexOf(this.self) + 1, keyBindingEntry);
     }
 
@@ -67,29 +70,33 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
 
     /**
      * Injected in the constructor:
-     * The injected code will check if this entry is a native key binding or a custom one
+     * The injected code will check if this entry is a native key binding or a
+     * custom one
      * created by this mod.
-     * - If it is native, build a "+" button to allow the player to create additional custom bindings when pressed.
-     * - If it is custom, build a "delete" button to allow the player to remove this binding.
+     * - If it is native, build a "+" button to allow the player to create
+     * additional custom bindings when pressed.
+     * - If it is custom, build a "delete" button to allow the player to remove this
+     * binding.
      */
     @Inject(method = "<init>", at = @At("TAIL"))
-    private void onInit(ControlsListWidget controlsListWidget, final KeyBinding binding, final Text bindingName, CallbackInfo ci) {
+    private void onInit(ControlsListWidget controlsListWidget, final KeyBinding binding, final Text bindingName,
+            CallbackInfo ci) {
         this.self = (KeyBindingEntry) (Object) this;
         this.controlsListWidget = controlsListWidget;
 
         // If this is one our custom key bindings, build a "delete" button
         if (binding.getTranslationKey().startsWith("multi.")) {
-            this.addKeyBindingButton = ButtonWidget.builder(Text.literal("\uD83D\uDDD1").formatted(Formatting.RED), (button) ->
-                            removeMultiKeyBinding(UUID.fromString(binding.getCategory()))
-                    )
+            this.addKeyBindingButton = ButtonWidget
+                    .builder(Text.literal("\uD83D\uDDD1").formatted(Formatting.RED),
+                            (button) -> removeMultiKeyBinding(UUID.fromString(binding.getCategory())))
                     .size(20, 20)
                     .build();
         } else {
             // If this is a native key binding, build a "+" button
             this.addKeyBindingButton = ButtonWidget.builder(Text.of("+"), (button) -> {
-                        this.self.setFocused(false);
-                        createCustomKeyBinding();
-                    })
+                this.self.setFocused(false);
+                createCustomKeyBinding();
+            })
                     .size(20, 20)
                     .build();
         }
@@ -97,13 +104,17 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
 
     /**
      * Injected in the render method:
-     * The injected code will check if this entry is a native key binding or a custom one
+     * The injected code will check if this entry is a native key binding or a
+     * custom one
      * created by this mod.
-     * - If it is native, render a "+" button to allow the player to create additional custom bindings when pressed.
-     * - If it is custom, render a "trash can" button to allow the player to remove this binding.
+     * - If it is native, render a "+" button to allow the player to create
+     * additional custom bindings when pressed.
+     * - If it is custom, render a "trash can" button to allow the player to remove
+     * this binding.
      */
     @Inject(method = "render", at = @At("TAIL"))
-    private void onRender(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta, CallbackInfo ci) {
+    private void onRender(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX,
+            int mouseY, boolean hovered, float tickDelta, CallbackInfo ci) {
         // Mimic the positioning and layout of the existing buttons
         int scrollbarX = controlsListWidget.getRowRight() + 6 + 2;
         int buttonX = scrollbarX - 165; // 5 wide gap between buttons, 20 wide "+" button
@@ -114,7 +125,8 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
     }
 
     /**
-     * The following override hardcoded lists that enable our custom buttons to be interacted with.
+     * The following override hardcoded lists that enable our custom buttons to be
+     * interacted with.
      */
     @Override
     public List<? extends Element> children() {

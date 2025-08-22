@@ -4,8 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.minecraft.client.option.KeyBinding;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import us.kenny.mixin.KeyBindingAccessor;
 
@@ -19,7 +19,8 @@ import java.util.UUID;
 
 public class ConfigManager {
     public static final int CONFIG_VERSION = 2;
-    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("multi-key-bindings.json");
+    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir()
+            .resolve("multi-key-bindings.json");
     private static final Gson GSON = new Gson();
 
     public static boolean isLoading = false;
@@ -46,22 +47,26 @@ public class ConfigManager {
      * attempt to migrate to latest config file format.
      */
     public static void loadConfigFile() {
-        if (!Files.exists(CONFIG_PATH)) return;
+        if (!Files.exists(CONFIG_PATH))
+            return;
 
         boolean migrated = false;
 
         try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
             JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json == null) return;
+            if (json == null)
+                return;
 
             int version = json.has("config_version") ? json.get("config_version").getAsInt() : 1;
             if (version < CONFIG_VERSION) {
-                MultiKeyBindingClient.LOGGER.info("Config version outdated (found v{}, expected v{}). Upgrading...", version, CONFIG_VERSION);
+                MultiKeyBindingClient.LOGGER.info("Config version outdated (found v{}, expected v{}). Upgrading...",
+                        version, CONFIG_VERSION);
                 json = migrateConfig(json, version);
                 migrated = true;
             }
 
-            if (!json.has("bindings")) return;
+            if (!json.has("bindings"))
+                return;
 
             JsonArray keyBindingsArray = json.getAsJsonArray("bindings");
             for (JsonElement element : keyBindingsArray) {
@@ -89,6 +94,9 @@ public class ConfigManager {
 
     /**
      * Migrate a config JSON object to latest format.
+     * 
+     * @param json    The config to migrate.
+     * @param version The version of the config we are migrating.
      */
     private static JsonObject migrateConfig(JsonObject json, int version) {
         JsonObject newConfig = new JsonObject();

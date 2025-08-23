@@ -4,6 +4,8 @@
   "compatibilityLevel": "JAVA_21",
   "plugin": "us.kenny.mixin.controlling.ControllingMixinPlugin",
   "client": [
+    "KeyEntryAccessor",
+    "KeyEntryMixin",
     "NewKeyBindsListMixin"
   ],
   "injectors": {

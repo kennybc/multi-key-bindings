@@ -3,6 +3,9 @@ package us.kenny.mixin.controlling;
 import com.blamejared.controlling.client.NewKeyBindsList;
 import com.blamejared.controlling.client.NewKeyBindsList.KeyEntry;
 import com.google.common.collect.ImmutableList;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
@@ -52,7 +55,7 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry {
                 "key.keyboard.unknown");
 
         KeyEntry keyEntry = KeyEntryAccessor.create(newKeyBindsList, keyBinding,
-                Text.of("     |"));
+                Text.translatable(key.getTranslationKey()));
         newKeyBindsList.children().add(newKeyBindsList.children().indexOf(this.self) + 1, keyEntry);
     }
 
@@ -70,15 +73,15 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry {
     }
 
     @Inject(method = "<init>(Lcom/blamejared/controlling/client/NewKeyBindsList;Lnet/minecraft/client/option/KeyBinding;Lnet/minecraft/text/Text;)V", at = @At("TAIL"), remap = false)
-    private void onInit(NewKeyBindsList newKeyBindsList, KeyBinding binding, Text bindingName, CallbackInfo ci) {
+    private void onInit(NewKeyBindsList newKeyBindsList, KeyBinding keyBinding, Text bindingName, CallbackInfo ci) {
         this.self = (KeyEntry) (Object) this;
         this.newKeyBindsList = newKeyBindsList;
 
         // If this is one our custom key bindings, build a "delete" button
-        if (binding.getTranslationKey().startsWith("multi.")) {
+        if (keyBinding.getTranslationKey().startsWith("multi.")) {
             this.addKeyBindingButton = ButtonWidget
                     .builder(Text.literal("\uD83D\uDDD1").formatted(Formatting.RED),
-                            (button) -> removeMultiKeyBinding(UUID.fromString(binding.getCategory())))
+                            (button) -> removeMultiKeyBinding(UUID.fromString(keyBinding.getCategory())))
                     .size(20, 20)
                     .build();
         } else {
@@ -103,6 +106,28 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry {
 
         addKeyBindingButton.setPosition(buttonX, buttonY);
         addKeyBindingButton.render(context, mouseX, mouseY, tickDelta);
+    }
+
+    @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/Text;III)V"))
+    private void onRender(DrawContext context, TextRenderer textRenderer, Text text, int x, int y, int color,
+            Operation<Void> original) {
+        // Draw arrow instead of displaying action name for custom key bindings
+        if (key.getTranslationKey().startsWith("multi.")) {
+            int leftOffset = 10;
+            int topOffset = 5;
+            int arrowLength = 20;
+
+            context.fill(x + leftOffset, y + topOffset, x + leftOffset + arrowLength, y + topOffset + 1, color);
+            context.fill(x + leftOffset, y, x + leftOffset + 1, y + topOffset, color);
+
+            int tipX = x + leftOffset + arrowLength;
+            for (int i = 0; i <= 2; i++) {
+                context.fill(tipX - i, y + topOffset - i, tipX - i + 1, y + topOffset - i + 1, color);
+                context.fill(tipX - i, y + topOffset + i, tipX - i + 1, y + topOffset + i + 1, color);
+            }
+        } else {
+            original.call(context, textRenderer, text, x, y, color);
+        }
     }
 
     @Override

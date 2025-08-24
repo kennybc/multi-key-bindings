@@ -33,9 +33,10 @@ public abstract class ControlsListWidgetMixin {
 
             // Create and insert instances of KeyBindingEntry for any custom bindings
             Collection<KeyBinding> keyBindings = MultiKeyBindingManager.getKeyBindings(keyBinding.getTranslationKey());
-            for (KeyBinding customKeyBinding : keyBindings) {
+            for (KeyBinding multiKeyBinding : keyBindings) {
                 ControlsListWidget.KeyBindingEntry newKeyBindingEntry = KeyBindingEntryAccessor.create(self,
-                        customKeyBinding, Text.of("     |"));
+                        multiKeyBinding,
+                        Text.translatable(multiKeyBinding.getTranslationKey().replaceFirst("^multi.", "")));
                 self.children().add(i + 1, newKeyBindingEntry);
             }
 

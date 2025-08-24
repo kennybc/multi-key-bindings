@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 @Mixin(value = KeyEntry.class, remap = false)
 public interface KeyEntryAccessor {
     @Invoker("<init>")
-    static KeyEntry create(NewKeyBindsList newKeyBindsList, KeyBinding binding, Text bindingName) {
+    static KeyEntry create(NewKeyBindsList newKeyBindsList, KeyBinding keyBinding, Text bindingName) {
         return null;
     }
 

@@ -41,7 +41,8 @@ public abstract class NewKeyBindsListMixin extends CustomList {
 
                 for (KeyBinding multiKeyBinding : multiKeyBindings) {
                     original.call(newKeyBindsList,
-                            KeyEntryAccessor.create(newKeyBindsList, multiKeyBinding, Text.of("     |")));
+                            KeyEntryAccessor.create(newKeyBindsList, multiKeyBinding, Text
+                                    .translatable(multiKeyBinding.getTranslationKey().replaceFirst("^multi.", ""))));
                 }
             } catch (Exception e) {
                 MultiKeyBindingClient.LOGGER.error(e.getMessage(), e);

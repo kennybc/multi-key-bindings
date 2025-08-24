@@ -19,21 +19,22 @@ public abstract class HandledScreenMixin {
      * Tests a key code against a KeyBinding to see if they are associated.
      * We cast the key code to a mouse action.
      *
-     * @param binding  The key binding we are testing against.
-     * @param code     The key code we are testing.
-     * @param original The original operation we are wrapping; call the original if
-     *                 we don't detect a match.
+     * @param keyBinding The key binding we are testing against.
+     * @param code       The key code we are testing.
+     * @param original   The original operation we are wrapping; call the original
+     *                   if
+     *                   we don't detect a match.
      */
     @Unique
-    private boolean isMouseMatch(KeyBinding binding, int code, Operation<Boolean> original) {
-        Collection<KeyBinding> keyBindings = MultiKeyBindingManager.getKeyBindings(binding.getTranslationKey());
-        for (KeyBinding keyBinding : keyBindings) {
-            InputUtil.Key boundKey = ((KeyBindingAccessor) keyBinding).getBoundKey();
+    private boolean isMouseMatch(KeyBinding keyBinding, int code, Operation<Boolean> original) {
+        Collection<KeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(keyBinding.getTranslationKey());
+        for (KeyBinding multiKeyBinding : multiKeyBindings) {
+            InputUtil.Key boundKey = ((KeyBindingAccessor) multiKeyBinding).getBoundKey();
             if (boundKey.getCategory() == InputUtil.Type.MOUSE && code == boundKey.getCode()) {
                 return true;
             }
         }
-        return original.call(binding, code);
+        return original.call(keyBinding, code);
     }
 
     /**
@@ -46,15 +47,15 @@ public abstract class HandledScreenMixin {
      *                 we don't detect a match.
      */
     @Unique
-    private boolean isKeyMatch(KeyBinding binding, int code, int scanCode, Operation<Boolean> original) {
-        Collection<KeyBinding> keyBindings = MultiKeyBindingManager.getKeyBindings(binding.getTranslationKey());
-        for (KeyBinding keyBinding : keyBindings) {
-            InputUtil.Key boundKey = ((KeyBindingAccessor) keyBinding).getBoundKey();
+    private boolean isKeyMatch(KeyBinding keyBinding, int code, int scanCode, Operation<Boolean> original) {
+        Collection<KeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(keyBinding.getTranslationKey());
+        for (KeyBinding multiKeyBinding : multiKeyBindings) {
+            InputUtil.Key boundKey = ((KeyBindingAccessor) multiKeyBinding).getBoundKey();
             if (boundKey.getCategory() == InputUtil.Type.KEYSYM && code == boundKey.getCode()) {
                 return true;
             }
         }
-        return original.call(binding, code, scanCode);
+        return original.call(keyBinding, code, scanCode);
     }
 
     /**
@@ -63,22 +64,22 @@ public abstract class HandledScreenMixin {
      * key/mouse binds are activated
      */
     @WrapOperation(method = "mouseClicked", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesMouse(I)Z"))
-    public boolean onMouseClicked(KeyBinding binding, int code, Operation<Boolean> original) {
-        return isMouseMatch(binding, code, original);
+    public boolean onMouseClicked(KeyBinding keyBinding, int code, Operation<Boolean> original) {
+        return isMouseMatch(keyBinding, code, original);
     }
 
     @WrapOperation(method = "mouseReleased", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesMouse(I)Z"))
-    public boolean onMouseReleased(KeyBinding binding, int code, Operation<Boolean> original) {
-        return isMouseMatch(binding, code, original);
+    public boolean onMouseReleased(KeyBinding keyBinding, int code, Operation<Boolean> original) {
+        return isMouseMatch(keyBinding, code, original);
     }
 
     @WrapOperation(method = "keyPressed", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesKey(II)Z"))
-    public boolean onKeyPressed(KeyBinding binding, int code, int scanCode, Operation<Boolean> original) {
-        return isKeyMatch(binding, code, scanCode, original);
+    public boolean onKeyPressed(KeyBinding keyBinding, int code, int scanCode, Operation<Boolean> original) {
+        return isKeyMatch(keyBinding, code, scanCode, original);
     }
 
     @WrapOperation(method = "handleHotbarKeyPressed", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/KeyBinding;matchesKey(II)Z"))
-    public boolean onHotbarKeyPressed(KeyBinding binding, int code, int scanCode, Operation<Boolean> original) {
-        return isKeyMatch(binding, code, scanCode, original);
+    public boolean onHotbarKeyPressed(KeyBinding keyBinding, int code, int scanCode, Operation<Boolean> original) {
+        return isKeyMatch(keyBinding, code, scanCode, original);
     }
 }

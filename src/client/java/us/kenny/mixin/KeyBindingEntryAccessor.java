@@ -10,7 +10,8 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 @Mixin(ControlsListWidget.KeyBindingEntry.class)
 public interface KeyBindingEntryAccessor {
     @Invoker("<init>")
-    static ControlsListWidget.KeyBindingEntry create(ControlsListWidget widget, KeyBinding binding, Text bindingName) {
+    static ControlsListWidget.KeyBindingEntry create(ControlsListWidget widget, KeyBinding keyBinding,
+            Text bindingName) {
         return null;
     }
 

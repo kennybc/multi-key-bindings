@@ -25,7 +25,7 @@ public abstract class NewKeyBindsListMixin extends CustomList {
     }
 
     @WrapOperation(method = "<init>(Lnet/minecraft/client/gui/screen/option/KeybindsScreen;Lnet/minecraft/client/MinecraftClient;)V", at = @At(value = "INVOKE", target = "Lcom/blamejared/controlling/client/NewKeyBindsList;addEntry(Lnet/minecraft/client/gui/screen/option/ControlsListWidget$Entry;)I"), remap = false)
-    private int onConstructKeyEntry(NewKeyBindsList newKeyBindsList, ControlsListWidget.Entry entry,
+    private int onAddEntry(NewKeyBindsList newKeyBindsList, ControlsListWidget.Entry entry,
             Operation<Integer> original) {
 
         int result = original.call(newKeyBindsList, entry);

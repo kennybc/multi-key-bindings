@@ -56,6 +56,7 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry {
 
         KeyEntry keyEntry = KeyEntryAccessor.create(newKeyBindsList, keyBinding,
                 Text.translatable(key.getTranslationKey()));
+        newKeyBindsList.allEntries.add(newKeyBindsList.allEntries.indexOf(this.self) + 1, keyEntry);
         newKeyBindsList.children().add(newKeyBindsList.children().indexOf(this.self) + 1, keyEntry);
     }
 

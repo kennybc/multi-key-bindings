@@ -1,7 +1,9 @@
 package us.kenny;
 
+import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.util.InputUtil;
 import us.kenny.core.MultiKeyBinding;
+import us.kenny.core.StickyMultiKeyBinding;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,34 +13,59 @@ import java.util.Map;
 import java.util.UUID;
 
 public class MultiKeyBindingManager {
+    private static GameOptions gameOptions;
+
     private static final Map<String, List<MultiKeyBinding>> ACTION_TO_BINDINGS = new HashMap<>();
     private static final Map<InputUtil.Key, List<MultiKeyBinding>> KEY_TO_BINDINGS = new HashMap<>();
     private static final Map<UUID, MultiKeyBinding> ID_TO_BINDING = new HashMap<>();
 
-    /**
-     * Create a new key binding and save it to the config file.
-     * 
-     * @param action         The name of the in-game action.
-     * @param translationKey The string representing the bound key (e.g.
-     *                       "key.keyboard.w").
-     */
-    public static MultiKeyBinding addKeyBinding(String action, String translationKey) {
-        UUID newId = UUID.randomUUID();
-        InputUtil.Key key = InputUtil.fromTranslationKey(translationKey);
-        MultiKeyBinding multiKeyBinding = new MultiKeyBinding(newId, action, key);
+    public static GameOptions getGameOptions() {
+        return MultiKeyBindingManager.gameOptions;
+    }
 
-        ID_TO_BINDING.put(newId, multiKeyBinding);
-        ACTION_TO_BINDINGS.computeIfAbsent(action, k -> new ArrayList<>()).add(multiKeyBinding);
-        KEY_TO_BINDINGS.computeIfAbsent(key, k -> new ArrayList<>()).add(multiKeyBinding);
+    public static void setGameOptions(GameOptions gameOptions) {
+        MultiKeyBindingManager.gameOptions = gameOptions;
+    }
+
+    /**
+     * Create a new key binding and save it to the config file. (Prefixes the action
+     * with "multi."")
+     *
+     * @see MultiKeyBindingManager#addKeyBinding(String, String, String, UUID)
+     */
+    public static MultiKeyBinding addKeyBinding(String action, String category, String translationKey) {
+        UUID newId = UUID.randomUUID();
+        MultiKeyBinding multiKeyBinding = addKeyBinding("multi." + action, category, translationKey, newId);
 
         ConfigManager.saveConfigFile();
 
         return multiKeyBinding;
     }
 
-    public static MultiKeyBinding addKeyBinding(String action, String translationKey, UUID newId) {
+    /**
+     * Create a new key binding and add it directly to the binding maps.
+     *
+     * @param action         The action (e.g. "multi.key.jump")
+     * @param category       The category of the action.
+     * @param translationKey The string representing the bound key (e.g.
+     *                       "key.keyboard.w").
+     * @param newId          The ID to set the binding to.
+     */
+    public static MultiKeyBinding addKeyBinding(String action, String category, String translationKey, UUID newId) {
         InputUtil.Key key = InputUtil.fromTranslationKey(translationKey);
-        MultiKeyBinding multiKeyBinding = new MultiKeyBinding(newId, action, key);
+        MultiKeyBinding multiKeyBinding;
+
+        if (action.equals("multi.key.sneak")) {
+            multiKeyBinding = new StickyMultiKeyBinding(newId, action, category, key,
+                    gameOptions.getSneakToggled()::getValue);
+        } else if (action.equals("multi.key.sprint")) {
+            multiKeyBinding = new StickyMultiKeyBinding(newId, action, category, key,
+                    gameOptions.getSneakToggled()::getValue);
+        } else {
+            multiKeyBinding = new MultiKeyBinding(newId, action, category, key);
+        }
+
+        MultiKeyBindingClient.LOGGER.info(multiKeyBinding.getAction());
 
         ID_TO_BINDING.put(newId, multiKeyBinding);
         ACTION_TO_BINDINGS.computeIfAbsent(action, k -> new ArrayList<>()).add(multiKeyBinding);

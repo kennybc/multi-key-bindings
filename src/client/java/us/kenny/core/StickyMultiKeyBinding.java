@@ -8,8 +8,9 @@ import java.util.function.BooleanSupplier;
 public class StickyMultiKeyBinding extends MultiKeyBinding {
     private final BooleanSupplier toggleGetter;
 
-    public StickyMultiKeyBinding(UUID id, String action, InputUtil.Key key, BooleanSupplier toggleGetter) {
-        super(id, action, key);
+    public StickyMultiKeyBinding(UUID id, String action, String category, InputUtil.Key key,
+            BooleanSupplier toggleGetter) {
+        super(id, action, category, key);
         this.toggleGetter = toggleGetter;
     }
 

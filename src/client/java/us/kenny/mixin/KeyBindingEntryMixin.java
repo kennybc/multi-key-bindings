@@ -47,7 +47,9 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
      */
     @Unique
     private void createCustomKeyBinding() {
-        MultiKeyBinding multiKeyBinding = MultiKeyBindingManager.addKeyBinding("multi." + binding.getTranslationKey(),
+        MultiKeyBinding multiKeyBinding = MultiKeyBindingManager.addKeyBinding(
+                binding.getTranslationKey(),
+                binding.getCategory(),
                 "key.keyboard.unknown");
 
         MultiKeyBindingEntry multiKeyBindingEntry = new MultiKeyBindingEntry(controlsListWidget, multiKeyBinding);

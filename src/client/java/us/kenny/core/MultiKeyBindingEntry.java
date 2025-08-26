@@ -10,6 +10,7 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import net.minecraft.util.Colors;
 import net.minecraft.util.Formatting;
+import org.spongepowered.asm.mixin.Unique;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.mixin.ControlsListWidgetAccessor;
 
@@ -58,6 +59,11 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
                 .build();
 
         this.update();
+    }
+
+    @Unique
+    public MultiKeyBinding getMultiKeyBinding() {
+        return this.multiKeyBinding;
     }
 
     @Override

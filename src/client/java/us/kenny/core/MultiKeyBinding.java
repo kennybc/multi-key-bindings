@@ -8,14 +8,16 @@ public class MultiKeyBinding {
 
     private final UUID id;
     private final String action;
+    private String category;
     private InputUtil.Key key;
 
     private boolean pressed;
     private int timesPressed;
 
-    public MultiKeyBinding(UUID id, String action, InputUtil.Key key) {
+    public MultiKeyBinding(UUID id, String action, String category, InputUtil.Key key) {
         this.id = id;
         this.action = action;
+        this.category = category;
         this.key = key;
     }
 
@@ -30,6 +32,14 @@ public class MultiKeyBinding {
 
     public String getAction() {
         return this.action;
+    }
+
+    public String getCategory() {
+        return this.category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     public InputUtil.Key getKey() {

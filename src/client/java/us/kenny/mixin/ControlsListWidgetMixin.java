@@ -36,6 +36,7 @@ public abstract class ControlsListWidgetMixin {
             Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager
                     .getKeyBindings(keyBinding.getTranslationKey());
             for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
+                multiKeyBinding.setCategory(keyBinding.getCategory());
                 MultiKeyBindingEntry multiKeyBindingEntry = new MultiKeyBindingEntry(self, multiKeyBinding);
                 self.children().add(i + 1, multiKeyBindingEntry);
             }

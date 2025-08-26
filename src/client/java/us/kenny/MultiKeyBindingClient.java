@@ -13,7 +13,9 @@ public class MultiKeyBindingClient implements ClientModInitializer {
         ConfigManager.loadConfigFile();
 
         if (FabricLoader.getInstance().isModLoaded("controlling")) {
-            LOGGER.info("TEST CONTROLLING IS ACTIVE");
+            LOGGER.info("Starting multi-key-bindings with controlling plugin!");
+        } else {
+            LOGGER.info("Starting multi-key-bindings!");
         }
     }
 }

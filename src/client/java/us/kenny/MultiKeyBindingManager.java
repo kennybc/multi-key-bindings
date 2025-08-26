@@ -17,24 +17,25 @@ public class MultiKeyBindingManager {
 
     /**
      * Create a new key binding and save it to the config file.
-     *
-     * @see us.kenny.MultiKeyBindingManager#addKeyBinding(String, String, UUID)
+     * 
+     * @param action         The name of the in-game action.
+     * @param translationKey The string representing the bound key (e.g.
+     *                       "key.keyboard.w").
      */
     public static MultiKeyBinding addKeyBinding(String action, String translationKey) {
-        MultiKeyBinding multiKeyBinding = addKeyBinding(action, translationKey, UUID.randomUUID());
+        UUID newId = UUID.randomUUID();
+        InputUtil.Key key = InputUtil.fromTranslationKey(translationKey);
+        MultiKeyBinding multiKeyBinding = new MultiKeyBinding(newId, action, key);
+
+        ID_TO_BINDING.put(newId, multiKeyBinding);
+        ACTION_TO_BINDINGS.computeIfAbsent(action, k -> new ArrayList<>()).add(multiKeyBinding);
+        KEY_TO_BINDINGS.computeIfAbsent(key, k -> new ArrayList<>()).add(multiKeyBinding);
+
         ConfigManager.saveConfigFile();
 
         return multiKeyBinding;
     }
 
-    /**
-     * Create a new key binding and add it directly to the binding maps.
-     *
-     * @param action         The name of the in-game action.
-     * @param translationKey The string representing the bound key (e.g.
-     *                       "key.keyboard.w").
-     * @param newId          The ID to set the binding to.
-     */
     public static MultiKeyBinding addKeyBinding(String action, String translationKey, UUID newId) {
         InputUtil.Key key = InputUtil.fromTranslationKey(translationKey);
         MultiKeyBinding multiKeyBinding = new MultiKeyBinding(newId, action, key);
@@ -70,11 +71,6 @@ public class MultiKeyBindingManager {
 
     /**
      * Set an existing custom key binding to a new key.
-     * -----
-     * NOTE: This intentionally does not save the config as that must be done
-     * reactively to prevent recursive behavior.
-     * 
-     * @see us.kenny.mixin.KeyBindingMixin#afterSetBoundKey
      *
      * @param multiKeyBindingId The UUID of the key binding to update.
      * @param newKey            The new key to associate the binding with.

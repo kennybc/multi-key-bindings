@@ -30,29 +30,20 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
         this.parentScreen = ((MultiKeyBindingScreen) ((ControlsListWidgetAccessor) parentList).getParent());
         this.multiKeyBinding = multiKeyBinding;
 
-        this.editButton = ButtonWidget.builder(Text.of(multiKeyBinding.getAction()), button -> {
-            this.parentScreen.setSelectedMultiKeyBinding(multiKeyBinding);
-            this.parentList.update();
-        })
-                .dimensions(0, 0, 75, 20)
-                .narrationSupplier(
-                        textSupplier -> multiKeyBinding.getKey().equals(InputUtil.UNKNOWN_KEY)
-                                ? Text.translatable("narrator.controls.unbound",
-                                        new Object[] { Text.of(multiKeyBinding
-                                                .getAction()) })
-                                : Text.translatable("narrator.controls.bound",
-                                        new Object[] { Text.of(
-                                                multiKeyBinding.getAction()),
-                                                textSupplier.get() }))
+        this.editButton = ButtonWidget
+                .builder(Text.of(multiKeyBinding.getAction()), button -> {
+                    this.parentScreen.setSelectedMultiKeyBinding(multiKeyBinding);
+                    this.parentList.update();
+                })
+                .size(75, 20)
                 .build();
 
-        this.resetButton = ButtonWidget.builder(Text.translatable("controls.reset"), button -> {
-            multiKeyBinding.setKey(InputUtil.UNKNOWN_KEY);
-            this.parentList.update();
-        }).dimensions(0, 0, 50, 20)
-                .narrationSupplier(
-                        textSupplier -> Text.translatable("narrator.controls.reset",
-                                new Object[] { Text.of(multiKeyBinding.getAction()) }))
+        this.resetButton = ButtonWidget
+                .builder(Text.translatable("controls.reset"), button -> {
+                    multiKeyBinding.setKey(InputUtil.UNKNOWN_KEY);
+                    this.parentList.update();
+                })
+                .size(50, 20)
                 .build();
 
         this.removeKeyBindingButton = ButtonWidget

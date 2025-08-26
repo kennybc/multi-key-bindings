@@ -42,6 +42,9 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry {
     @Unique
     private KeyEntry self;
 
+    /**
+     * @see us.kenny.mixin.KeyBindingEntryMixin#createCustomKeyBinding
+     */
     @Unique
     private void createCustomKeyBinding() {
         MultiKeyBinding multiKeyBinding = MultiKeyBindingManager.addKeyBinding("multi." + key.getTranslationKey(),
@@ -52,6 +55,9 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry {
         newKeyBindsList.children().add(newKeyBindsList.children().indexOf(this.self) + 1, multiKeyBindingEntry);
     }
 
+    /**
+     * @see us.kenny.mixin.KeyBindingEntryMixin#onInit
+     */
     @Inject(method = "<init>(Lcom/blamejared/controlling/client/NewKeyBindsList;Lnet/minecraft/client/option/KeyBinding;Lnet/minecraft/text/Text;)V", at = @At("TAIL"), remap = false)
     private void onInit(NewKeyBindsList newKeyBindsList, KeyBinding keyBinding, Text bindingName, CallbackInfo ci) {
         this.self = (KeyEntry) (Object) this;
@@ -65,6 +71,9 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry {
                 .build();
     }
 
+    /**
+     * @see us.kenny.mixin.KeyBindingEntryMixin#onRender
+     */
     @Inject(method = "render", at = @At("TAIL"))
     private void onRender(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX,
             int mouseY, boolean hovered, float tickDelta, CallbackInfo ci) {
@@ -77,11 +86,17 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry {
         addKeyBindingButton.render(context, mouseX, mouseY, tickDelta);
     }
 
+    /**
+     * @see us.kenny.mixin.KeyBindingEntryMixin#children
+     */
     @Override
     public List<? extends Element> children() {
         return ImmutableList.of(this.btnChangeKeyBinding, this.btnResetKeyBinding, this.addKeyBindingButton);
     }
 
+    /**
+     * @see us.kenny.mixin.KeyBindingEntryMixin#selectableChildren
+     */
     @Override
     public List<? extends Selectable> selectableChildren() {
         return ImmutableList.of(this.btnChangeKeyBinding, this.btnResetKeyBinding, this.addKeyBindingButton);

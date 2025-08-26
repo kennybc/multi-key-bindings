@@ -8,11 +8,12 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.option.ControlsListWidget;
 import net.minecraft.client.gui.screen.option.KeybindsScreen;
 import net.minecraft.client.option.KeyBinding;
-import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import us.kenny.MultiKeyBindingClient;
 import us.kenny.MultiKeyBindingManager;
+import us.kenny.core.MultiKeyBinding;
+import us.kenny.core.MultiKeyBindingEntry;
 
 import java.lang.reflect.Field;
 import java.util.Collection;
@@ -36,13 +37,11 @@ public abstract class NewKeyBindsListMixin extends CustomList {
                 keyField.setAccessible(true);
                 KeyBinding keyBinding = (KeyBinding) keyField.get(entry);
 
-                Collection<KeyBinding> multiKeyBindings = MultiKeyBindingManager
+                Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager
                         .getKeyBindings(keyBinding.getTranslationKey());
 
-                for (KeyBinding multiKeyBinding : multiKeyBindings) {
-                    original.call(newKeyBindsList,
-                            KeyEntryAccessor.create(newKeyBindsList, multiKeyBinding, Text
-                                    .translatable(multiKeyBinding.getTranslationKey().replaceFirst("^multi.", ""))));
+                for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
+                    original.call(newKeyBindsList, new MultiKeyBindingEntry(newKeyBindsList, multiKeyBinding));
                 }
             } catch (Exception e) {
                 MultiKeyBindingClient.LOGGER.error(e.getMessage(), e);

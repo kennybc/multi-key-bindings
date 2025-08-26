@@ -4,12 +4,13 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.option.ControlsListWidget;
 import net.minecraft.client.gui.screen.option.KeybindsScreen;
 import net.minecraft.client.option.KeyBinding;
-import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import us.kenny.MultiKeyBindingManager;
+import us.kenny.core.MultiKeyBinding;
+import us.kenny.core.MultiKeyBindingEntry;
 
 import java.util.Collection;
 
@@ -32,12 +33,11 @@ public abstract class ControlsListWidgetMixin {
             KeyBinding keyBinding = ((KeyBindingEntryAccessor) entry).getBinding();
 
             // Create and insert instances of KeyBindingEntry for any custom bindings
-            Collection<KeyBinding> keyBindings = MultiKeyBindingManager.getKeyBindings(keyBinding.getTranslationKey());
-            for (KeyBinding multiKeyBinding : keyBindings) {
-                ControlsListWidget.KeyBindingEntry newKeyBindingEntry = KeyBindingEntryAccessor.create(self,
-                        multiKeyBinding,
-                        Text.translatable(multiKeyBinding.getTranslationKey().replaceFirst("^multi.", "")));
-                self.children().add(i + 1, newKeyBindingEntry);
+            Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager
+                    .getKeyBindings(keyBinding.getTranslationKey());
+            for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
+                MultiKeyBindingEntry multiKeyBindingEntry = new MultiKeyBindingEntry(self, multiKeyBinding);
+                self.children().add(i + 1, multiKeyBindingEntry);
             }
 
         }

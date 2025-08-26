@@ -5,16 +5,14 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
-import us.kenny.mixin.KeyBindingAccessor;
+import us.kenny.core.MultiKeyBinding;
 
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.UUID;
 
 public class ConfigManager {
@@ -132,11 +130,11 @@ public class ConfigManager {
     private static JsonArray getFormattedKeyBindings() {
         JsonArray keyBindingsArray = new JsonArray();
 
-        for (Map.Entry<UUID, KeyBinding> entry : MultiKeyBindingManager.getKeyBindings()) {
+        for (MultiKeyBinding multiKeyBinding : MultiKeyBindingManager.getKeyBindings()) {
             JsonObject keyBindingJson = new JsonObject();
-            keyBindingJson.addProperty("id", entry.getKey().toString());
-            keyBindingJson.addProperty("action", entry.getValue().getTranslationKey());
-            keyBindingJson.addProperty("key", ((KeyBindingAccessor) entry.getValue()).getBoundKey().toString());
+            keyBindingJson.addProperty("id", multiKeyBinding.getId().toString());
+            keyBindingJson.addProperty("action", multiKeyBinding.getAction());
+            keyBindingJson.addProperty("key", multiKeyBinding.getKey().getTranslationKey());
 
             keyBindingsArray.add(keyBindingJson);
         }

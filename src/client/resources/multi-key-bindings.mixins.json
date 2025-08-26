@@ -1,12 +1,15 @@
 {
   "required": true,
-  "package": "us.kenny.mixin.controlling",
+  "package": "us.kenny.mixin",
   "compatibilityLevel": "JAVA_21",
-  "plugin": "us.kenny.mixin.controlling.ControllingMixinPlugin",
   "client": [
-    "KeyEntryAccessor",
-    "KeyEntryMixin",
-    "NewKeyBindsListMixin"
+    "ControlsListWidgetAccessor",
+    "ControlsListWidgetMixin",
+    "KeyBindingAccessor",
+    "KeyBindingEntryAccessor",
+    "KeyBindingEntryMixin",
+    "KeyBindingMixin",
+    "KeybindsScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

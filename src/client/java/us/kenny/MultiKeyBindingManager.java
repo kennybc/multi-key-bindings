@@ -65,8 +65,6 @@ public class MultiKeyBindingManager {
             multiKeyBinding = new MultiKeyBinding(newId, action, category, key);
         }
 
-        MultiKeyBindingClient.LOGGER.info(multiKeyBinding.getAction());
-
         ID_TO_BINDING.put(newId, multiKeyBinding);
         ACTION_TO_BINDINGS.computeIfAbsent(action, k -> new ArrayList<>()).add(multiKeyBinding);
         KEY_TO_BINDINGS.computeIfAbsent(key, k -> new ArrayList<>()).add(multiKeyBinding);

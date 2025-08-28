@@ -17,18 +17,18 @@ import us.kenny.mixin.ControlsListWidgetAccessor;
 import java.util.List;
 
 public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
-
-    private final ControlsListWidget parentList;
-    private final MultiKeyBindingScreen parentScreen;
+    protected final ControlsListWidget parentList;
+    protected MultiKeyBindingScreen parentScreen;
     private final MultiKeyBinding multiKeyBinding;
 
     private final ButtonWidget editButton;
     private final ButtonWidget resetButton;
-    private final ButtonWidget removeKeyBindingButton;
+    protected ButtonWidget removeKeyBindingButton;
 
     public MultiKeyBindingEntry(final ControlsListWidget parentList, final MultiKeyBinding multiKeyBinding) {
         this.parentList = parentList;
-        this.parentScreen = ((MultiKeyBindingScreen) ((ControlsListWidgetAccessor) parentList).getParent());
+        this.parentScreen = ((MultiKeyBindingScreen) ((ControlsListWidgetAccessor) parentList)
+                .getParent());
         this.multiKeyBinding = multiKeyBinding;
 
         this.editButton = ButtonWidget

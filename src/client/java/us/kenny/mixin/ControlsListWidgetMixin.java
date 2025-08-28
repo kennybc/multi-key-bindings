@@ -30,9 +30,10 @@ public abstract class ControlsListWidgetMixin {
 
             if (!(entry instanceof ControlsListWidget.KeyBindingEntry))
                 continue;
+
             KeyBinding keyBinding = ((KeyBindingEntryAccessor) entry).getBinding();
 
-            // Create and insert instances of KeyBindingEntry for any custom bindings
+            // Create and insert a MultiKeyBindingEntry for any custom bindings
             Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager
                     .getKeyBindings(keyBinding.getTranslationKey());
             for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {

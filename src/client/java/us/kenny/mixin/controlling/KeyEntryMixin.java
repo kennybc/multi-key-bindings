@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import us.kenny.MultiKeyBindingManager;
+import us.kenny.core.ControllingMultiKeyBindingEntry;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
 
@@ -52,7 +53,8 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry {
                 key.getCategory(),
                 "key.keyboard.unknown");
 
-        MultiKeyBindingEntry multiKeyBindingEntry = new MultiKeyBindingEntry(newKeyBindsList, multiKeyBinding);
+        MultiKeyBindingEntry multiKeyBindingEntry = new ControllingMultiKeyBindingEntry(newKeyBindsList,
+                multiKeyBinding);
         newKeyBindsList.allEntries.add(newKeyBindsList.allEntries.indexOf(this.self) + 1, multiKeyBindingEntry);
         newKeyBindsList.children().add(newKeyBindsList.children().indexOf(this.self) + 1, multiKeyBindingEntry);
     }

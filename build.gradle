@@ -40,8 +40,10 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
     // Optional compile time dependency for development
-    modCompileOnly files("libs/Searchables-fabric-1.21.8-1.0.2.jar")
-    modCompileOnly files("libs/Controlling-fabric-1.21.8-26.0.3.jar")
+    // modCompileOnly files("libs/Searchables-fabric-1.21.8-1.0.2.jar")
+    // modCompileOnly files("libs/Controlling-fabric-1.21.8-26.0.3.jar")
+    modCompileOnly files("libs/Controlling-fabric-1.20.1-12.0.2.jar")
+    modCompileOnly files("libs/Searchables-fabric-1.20.1-1.0.3.jar")
 }
 
 processResources {

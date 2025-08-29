@@ -4,7 +4,9 @@
   "version": "${version}",
   "name": "Multi Key Bindings",
   "description": "Allows players to create multiple keybindings for the same action/function.",
-  "authors": ["kennybc"],
+  "authors": [
+    "kennybc"
+  ],
   "contact": {
     "homepage": "https://fabricmc.net/",
     "sources": "https://github.com/FabricMC/fabric-example-mod"
@@ -13,14 +15,21 @@
   "icon": "assets/multi-key-bindings/icon.png",
   "environment": "*",
   "entrypoints": {
-    "client": ["us.kenny.MultiKeyBindingManager"]
+    "client": [
+      "us.kenny.MultiKeyBindingClient"
+    ]
   },
   "mixins": [
     {
-      "config": "multi-key-bindings.client.mixins.json",
+      "config": "multi-key-bindings.controlling.mixins.json",
+      "environment": "client"
+    },
+    {
+      "config": "multi-key-bindings.mixins.json",
       "environment": "client"
     }
   ],
+  "accessWidener": "multi-key-bindings.accesswidener",
   "depends": {
     "fabricloader": ">=0.16.10",
     "minecraft": "=1.20",

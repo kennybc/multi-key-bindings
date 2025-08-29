@@ -93,8 +93,8 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry implements 
     private void onRender(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX,
             int mouseY, boolean hovered, float tickDelta, CallbackInfo ci) {
         int scrollbarX = newKeyBindsList.getRowRight() + 6 + 2;
-        int buttonX = scrollbarX - 165;
-        int buttonY = y - 2;
+        int buttonX = scrollbarX - 110;
+        int buttonY = y;
 
         addKeyBindingButton.setPosition(buttonX, buttonY);
         addKeyBindingButton.render(context, mouseX, mouseY, tickDelta);
@@ -110,7 +110,6 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry implements 
             float delta,
             Operation<Void> original) {
         buttonWidget.active = !this.hidden && !this.key.isDefault();
-        ;
 
         original.call(buttonWidget, context, mouseX, mouseY, delta);
     }

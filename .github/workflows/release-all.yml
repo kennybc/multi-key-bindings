@@ -61,10 +61,17 @@ jobs:
                 git push origin "$MOD_VERSION"
             fi
 
+            # Extract changelog for this version (skip the header line)
+            MOD_ONLY=$(echo "$MOD_VERSION" | cut -d+ -f1)
+            CHANGELOG=$(awk "/^## $MOD_ONLY /{flag=1;next}/^## /{flag=0}flag" CHANGELOG.md | tail -n +2)
+            if [ -z "$CHANGELOG" ]; then
+              CHANGELOG="Release for Minecraft $b"
+            fi
+
             # Create release
             gh release create "$MOD_VERSION" \
               --title "Release $MOD_VERSION" \
-              --notes "Release for Minecraft $b" \
+              --notes "$CHANGELOG" \
               --draft=false \
               --prerelease=false
 

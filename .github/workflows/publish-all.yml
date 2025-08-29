@@ -49,6 +49,12 @@ jobs:
               continue
             fi
 
+            echo "Fetching release notes for $tag"
+            CHANGELOG=$(gh release view "$tag" --json body -q '.body')
+
+            # Escape to JSON-safe string (with \n for newlines)
+            CHANGELOG_SAFE=$(echo "$RELEASE_NOTES" | jq -Rs .)
+
             echo "Publishing release $tag to Modrinth"
             JAR_NAME="multi-key-bindings-${tag}.jar"
             JAR=$(gh release view "$tag" --json assets -q '.assets[] | select(.name | endswith(".jar")) | .url')
@@ -57,7 +63,7 @@ jobs:
             echo "Publishing $tag to Modrinth"
             VERSION=$(echo "$tag" | cut -d+ -f2)
             curl -v -X POST "https://api.modrinth.com/v2/version" \
-              -H "Authorization: mrp_JJlijZ37OVf2rcl8ZhlFJR2R4Qh8704yCuxRXCe7FlyxAlqRvo95HvZy2Wb7" \
+              -H "Authorization: $MODRINTH_TOKEN" \
               -F "data={ \
                 \"name\": \"$tag\", \
                 \"version_number\": \"$tag\", \
@@ -69,6 +75,7 @@ jobs:
                 \"status\": \"listed\", \
                 \"file_parts\": [\"file\"], \
                 \"featured\": false \
+                \"changelog\": $CHANGELOG_SAFE \
               };type=application/json" \
               -F "file=@$JAR_NAME"
 

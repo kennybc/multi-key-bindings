@@ -14,8 +14,4 @@ Most recently tested and working on 1.21.8!
 
 <br>
 
-> _Known compatibility issue with the mod "Controlling" which overrides the default MC controls screen. Current workaround is to disable Controlling, set extra key bindings with this mod, then reenable Controlling._
-
-<br>
-
 > _Note that there are niche limitations: e.g. if you set action "Open Inventory" to a mouse button, pressing that mouse button cannot close the inventory as a key would. Similarly, if binding a key to "Pick Block", you will not be able to drag to duplicate a block the way you would be able to with a mouse bind._

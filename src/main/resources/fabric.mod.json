@@ -16,15 +16,20 @@
   "environment": "*",
   "entrypoints": {
     "client": [
-      "us.kenny.MultiKeyBindingManager"
+      "us.kenny.MultiKeyBindingClient"
     ]
   },
   "mixins": [
     {
-      "config": "multi-key-bindings.client.mixins.json",
+      "config": "multi-key-bindings.controlling.mixins.json",
+      "environment": "client"
+    },
+    {
+      "config": "multi-key-bindings.mixins.json",
       "environment": "client"
     }
   ],
+  "accessWidener": "multi-key-bindings.accesswidener",
   "depends": {
     "fabricloader": ">=0.16.10",
     "minecraft": "1.20.5",

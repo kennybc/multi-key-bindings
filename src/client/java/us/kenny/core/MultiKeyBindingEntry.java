@@ -1,6 +1,7 @@
 package us.kenny.core;
 
 import com.google.common.collect.ImmutableList;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
@@ -79,17 +80,20 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
 
         // Render buttons
         int scrollbarX = this.parentList.getRowRight() + 6 + 2;
-        int buttonY = y - 2;
+        int buttonY = y - (FabricLoader.getInstance().isModLoaded("controlling") ? 0 : 2);
 
-        int resetButtonX = scrollbarX - this.resetButton.getWidth() - 10;
+        int resetButtonX = (FabricLoader.getInstance().isModLoaded("controlling") ? x + 210
+                : scrollbarX - this.resetButton.getWidth() - 10);
         this.resetButton.setPosition(resetButtonX, buttonY);
         this.resetButton.render(context, mouseX, mouseY, tickProgress);
 
-        int editButtonX = resetButtonX - this.editButton.getWidth() - 5;
+        int editButtonX = (FabricLoader.getInstance().isModLoaded("controlling") ? x + 105
+                : resetButtonX - this.editButton.getWidth() - 5);
         this.editButton.setPosition(editButtonX, buttonY);
         this.editButton.render(context, mouseX, mouseY, tickProgress);
 
-        int removeKeyBindingButtonX = editButtonX - this.removeKeyBindingButton.getWidth() - 5;
+        int removeKeyBindingButtonX = (FabricLoader.getInstance().isModLoaded("controlling") ? scrollbarX - 165
+                : editButtonX - this.removeKeyBindingButton.getWidth() - 5);
         this.removeKeyBindingButton.setPosition(removeKeyBindingButtonX, buttonY);
         this.removeKeyBindingButton.render(context, mouseX, mouseY, tickProgress);
 
@@ -98,6 +102,9 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
         int topOffset = 5;
         int arrowLength = 20;
 
+        if (FabricLoader.getInstance().isModLoaded("controlling")) {
+            x = Math.max(0, x + 90 - ((ControlsListWidgetAccessor) this.parentList).getMaxKeyNameLength());
+        }
         context.fill(x + leftOffset, y + topOffset, x + leftOffset + arrowLength, y + topOffset + 1,
                 Colors.ALTERNATE_WHITE);
         context.fill(x + leftOffset, y, x + leftOffset + 1, y + topOffset, Colors.ALTERNATE_WHITE);

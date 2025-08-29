@@ -39,6 +39,9 @@ dependencies {
     // Fabric API. This is technically optional, but you probably want it anyway.
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
+    // Optional compile time dependency for development
+    modCompileOnly files("libs/Searchables-fabric-1.21.8-1.0.2.jar")
+    modCompileOnly files("libs/Controlling-fabric-1.21.8-26.0.3.jar")
 }
 
 processResources {
@@ -85,4 +88,8 @@ publishing {
         // The repositories here will be used for publishing your artifact, not for
         // retrieving dependencies.
     }
+}
+
+loom {
+	accessWidenerPath = file("src/main/resources/multi-key-bindings.accesswidener")
 }

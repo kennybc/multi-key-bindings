@@ -1,52 +1,75 @@
 package us.kenny;
 
-import net.fabricmc.api.ClientModInitializer;
-import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.util.InputUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import us.kenny.mixin.KeyBindingAccessor;
+import us.kenny.core.MultiKeyBinding;
+import us.kenny.core.StickyMultiKeyBinding;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
-public class MultiKeyBindingManager implements ClientModInitializer {
-    public static final Logger LOGGER = LoggerFactory.getLogger("multi-key-bindings");
+public class MultiKeyBindingManager {
+    private static GameOptions gameOptions;
 
-    private static final Map<String, List<KeyBinding>> ACTION_TO_KEY_BINDINGS = new HashMap<>();
-    private static final Map<InputUtil.Key, List<KeyBinding>> KEY_TO_KEY_BINDINGS = new HashMap<>();
-    private static final Map<UUID, KeyBinding> ID_TO_KEY_BINDING = new HashMap<>();
+    private static final Map<String, List<MultiKeyBinding>> ACTION_TO_BINDINGS = new HashMap<>();
+    private static final Map<InputUtil.Key, List<MultiKeyBinding>> KEY_TO_BINDINGS = new HashMap<>();
+    private static final Map<UUID, MultiKeyBinding> ID_TO_BINDING = new HashMap<>();
 
-    public static boolean isLoading = false;
+    public static GameOptions getGameOptions() {
+        return MultiKeyBindingManager.gameOptions;
+    }
+
+    public static void setGameOptions(GameOptions gameOptions) {
+        MultiKeyBindingManager.gameOptions = gameOptions;
+    }
 
     /**
-     * Create a new key binding and save it to the config file.
+     * Create a new key binding and save it to the config file. (Prefixes the action
+     * with "multi."")
      *
-     * @see MultiKeyBindingManager#addKeyBinding(String, String, UUID)
+     * @see MultiKeyBindingManager#addKeyBinding(String, String, String, UUID)
      */
-    public static KeyBinding addKeyBinding(String action, String translationKey) {
-        KeyBinding keyBinding = addKeyBinding(action, translationKey, UUID.randomUUID());
+    public static MultiKeyBinding addKeyBinding(String action, String category, String translationKey) {
+        UUID newId = UUID.randomUUID();
+        MultiKeyBinding multiKeyBinding = addKeyBinding("multi." + action, category, translationKey, newId);
+
         ConfigManager.saveConfigFile();
 
-        return keyBinding;
+        return multiKeyBinding;
     }
 
     /**
      * Create a new key binding and add it directly to the binding maps.
      *
-     * @param action         The name of the in-game action.
-     * @param translationKey The string representing the bound key (e.g. "key.keyboard.w").
+     * @param action         The action (e.g. "multi.key.jump")
+     * @param category       The category of the action.
+     * @param translationKey The string representing the bound key (e.g.
+     *                       "key.keyboard.w").
      * @param newId          The ID to set the binding to.
      */
-    public static KeyBinding addKeyBinding(String action, String translationKey, UUID newId) {
+    public static MultiKeyBinding addKeyBinding(String action, String category, String translationKey, UUID newId) {
         InputUtil.Key key = InputUtil.fromTranslationKey(translationKey);
-        KeyBinding keyBinding = new KeyBinding(action, -1, newId.toString());
-        keyBinding.setBoundKey(key);
+        MultiKeyBinding multiKeyBinding;
 
-        ID_TO_KEY_BINDING.put(newId, keyBinding);
-        ACTION_TO_KEY_BINDINGS.computeIfAbsent(action, k -> new ArrayList<>()).add(keyBinding);
-        KEY_TO_KEY_BINDINGS.computeIfAbsent(key, k -> new ArrayList<>()).add(keyBinding);
+        if (action.equals("multi.key.sneak")) {
+            multiKeyBinding = new StickyMultiKeyBinding(newId, action, category, key,
+                    gameOptions.getSneakToggled()::getValue);
+        } else if (action.equals("multi.key.sprint")) {
+            multiKeyBinding = new StickyMultiKeyBinding(newId, action, category, key,
+                    gameOptions.getSneakToggled()::getValue);
+        } else {
+            multiKeyBinding = new MultiKeyBinding(newId, action, category, key);
+        }
 
-        return keyBinding;
+        ID_TO_BINDING.put(newId, multiKeyBinding);
+        ACTION_TO_BINDINGS.computeIfAbsent(action, k -> new ArrayList<>()).add(multiKeyBinding);
+        KEY_TO_BINDINGS.computeIfAbsent(key, k -> new ArrayList<>()).add(multiKeyBinding);
+
+        return multiKeyBinding;
     }
 
     /**
@@ -54,8 +77,8 @@ public class MultiKeyBindingManager implements ClientModInitializer {
      *
      * @param action The name of the in-game action.
      */
-    public static Collection<KeyBinding> getKeyBindings(String action) {
-        return ACTION_TO_KEY_BINDINGS.getOrDefault("multi." + action, new ArrayList<>());
+    public static Collection<MultiKeyBinding> getKeyBindings(String action) {
+        return ACTION_TO_BINDINGS.getOrDefault("multi." + action, new ArrayList<>());
     }
 
     /**
@@ -63,60 +86,55 @@ public class MultiKeyBindingManager implements ClientModInitializer {
      *
      * @param key The key.
      */
-    public static Collection<KeyBinding> getKeyBindings(InputUtil.Key key) {
-        return KEY_TO_KEY_BINDINGS.getOrDefault(key, new ArrayList<>());
+    public static Collection<MultiKeyBinding> getKeyBindings(InputUtil.Key key) {
+        return KEY_TO_BINDINGS.getOrDefault(key, new ArrayList<>());
     }
 
-    public static Set<Map.Entry<UUID, KeyBinding>> getKeyBindings() {
-        return ID_TO_KEY_BINDING.entrySet();
+    public static Collection<MultiKeyBinding> getKeyBindings() {
+        return ID_TO_BINDING.values();
     }
 
     /**
      * Set an existing custom key binding to a new key.
-     * -----
-     * NOTE: This intentionally does not save the config as that must be done reactively to prevent recursive
-     * behavior.
      *
-     * @param keyBindingId The UUID of the key binding to update.
-     * @param newKey       The new key to associate the binding with.
+     * @param multiKeyBindingId The UUID of the key binding to update.
+     * @param newKey            The new key to associate the binding with.
      */
-    public static void setKeyBinding(UUID keyBindingId, InputUtil.Key newKey) {
-        KeyBinding keyBinding = ID_TO_KEY_BINDING.get(keyBindingId);
-        if (keyBinding == null) return;
+    public static void setKeyBinding(MultiKeyBinding multiKeyBinding, InputUtil.Key newKey) {
+        if (multiKeyBinding == null)
+            return;
 
-        InputUtil.Key oldKey = ((KeyBindingAccessor) keyBinding).getBoundKey();
-        if (oldKey == newKey) return;
+        InputUtil.Key oldKey = multiKeyBinding.getKey();
+        if (oldKey == newKey)
+            return;
 
-        // Remove from old key to key binding, add to new one
-        List<KeyBinding> keyToKeyBindings = KEY_TO_KEY_BINDINGS.get(oldKey);
-        if (keyToKeyBindings != null) {
-            keyToKeyBindings.remove(keyBinding);
-        }
-        KEY_TO_KEY_BINDINGS.computeIfAbsent(newKey, k -> new ArrayList<>()).add(keyBinding);
+        multiKeyBinding.setKey(newKey);
+        KEY_TO_BINDINGS.computeIfPresent(oldKey, (k, v) -> {
+            v.remove(multiKeyBinding);
+            return v;
+        });
+        KEY_TO_BINDINGS.computeIfAbsent(newKey, k -> new ArrayList<>()).add(multiKeyBinding);
+        ConfigManager.saveConfigFile();
     }
 
     /**
      * Remove an existing key binding.
      *
-     * @param keyBindingId The UUID of the key binding to remove.
+     * @param multiKeyBindingId The UUID of the key binding to remove.
      */
-    public static void removeKeyBinding(UUID keyBindingId) {
-        KeyBinding keyBinding = ID_TO_KEY_BINDING.remove(keyBindingId);
-        if (keyBinding != null) {
-            List<KeyBinding> actionToKeyBindings = ACTION_TO_KEY_BINDINGS.get(keyBinding.getTranslationKey());
-            if (actionToKeyBindings != null) {
-                actionToKeyBindings.remove(keyBinding);
-            }
-            List<KeyBinding> keyToKeyBindings = KEY_TO_KEY_BINDINGS.get(((KeyBindingAccessor) keyBinding).getBoundKey());
-            if (keyToKeyBindings != null) {
-                keyToKeyBindings.remove(keyBinding);
-            }
-        }
-        ConfigManager.saveConfigFile();
-    }
+    public static void removeKeyBinding(MultiKeyBinding multiKeyBinding) {
+        if (multiKeyBinding == null)
+            return;
 
-    @Override
-    public void onInitializeClient() {
-        ConfigManager.loadConfigFile();
+        ID_TO_BINDING.remove(multiKeyBinding.getId());
+        ACTION_TO_BINDINGS.computeIfPresent(multiKeyBinding.getAction(), (k, v) -> {
+            v.remove(multiKeyBinding);
+            return v;
+        });
+        KEY_TO_BINDINGS.computeIfPresent(multiKeyBinding.getKey(), (k, v) -> {
+            v.remove(multiKeyBinding);
+            return v;
+        });
+        ConfigManager.saveConfigFile();
     }
 }

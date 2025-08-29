@@ -1,0 +1,77 @@
+name: Release all versions
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y jq xmlstarlet
+
+      - name: Get version branches
+        id: branches
+        run: |
+          BRANCHES=$(git branch -r | sed 's|origin/||' | grep -vE 'main|HEAD' | xargs)
+          echo "BRANCHES=$BRANCHES" >> $GITHUB_ENV
+          echo "Branches: $BRANCHES"
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Tag, build, and release
+        run: |
+          for b in $BRANCHES; do
+            echo "Processing $b"
+            git checkout "$b"
+
+            # Extract mod_version from gradle.properties
+            MOD_VERSION=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)
+            echo "Using mod version: $MOD_VERSION"
+
+            # Skip if release already exists
+            if gh release view "$MOD_VERSION" >/dev/null 2>&1; then
+                echo "Release $MOD_VERSION already exists. Skipping branch $b."
+                continue
+            fi
+
+            # Create tag if it doesn't exist
+            if ! git rev-parse "refs/tags/$MOD_VERSION" >/dev/null 2>&1; then
+                git tag "$MOD_VERSION"
+                git push origin "$MOD_VERSION"
+            fi
+
+            # Create release
+            gh release create "$MOD_VERSION" \
+              --title "Release $MOD_VERSION" \
+              --notes "Release for Minecraft $b" \
+              --draft=false \
+              --prerelease=false
+
+            # Build the mod JAR
+            ./gradlew build
+
+            # Attach the build mod jar
+            JAR_PATH=$(ls build/libs/*"$MOD_VERSION"*.jar | grep -v 'sources' | head -n1)
+            gh release upload "$MOD_VERSION" "$JAR_PATH" --clobber
+          done

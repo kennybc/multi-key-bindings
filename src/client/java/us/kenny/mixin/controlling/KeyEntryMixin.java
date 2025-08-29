@@ -94,7 +94,7 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry implements 
             int mouseY, boolean hovered, float tickDelta, CallbackInfo ci) {
         int scrollbarX = newKeyBindsList.getRowRight() + 6 + 2;
         int buttonX = scrollbarX - 165;
-        int buttonY = y - 2;
+        int buttonY = y;
 
         addKeyBindingButton.setPosition(buttonX, buttonY);
         addKeyBindingButton.render(context, mouseX, mouseY, tickDelta);

@@ -36,7 +36,7 @@ jobs:
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
         run: |
-          TAGS=$(git tag --list "1.0.*" | sort -V)
+          TAGS=$(git tag --list | sort -V)
           for tag in $TAGS; do
             echo "Checking release $tag"
             
@@ -50,10 +50,7 @@ jobs:
             fi
 
             echo "Fetching release notes for $tag"
-            CHANGELOG=$(gh release view "$tag" --json body -q '.body')
-
-            # Escape to JSON-safe string (with \n for newlines)
-            CHANGELOG_SAFE=$(echo "$RELEASE_NOTES" | jq -Rs .)
+            CHANGELOG=$(gh release view "$tag" --json body -q '.body' | jq -Rs .)
 
             echo "Publishing release $tag to Modrinth"
             JAR_NAME="multi-key-bindings-${tag}.jar"
@@ -74,8 +71,8 @@ jobs:
                 \"loaders\": [\"fabric\"], \
                 \"status\": \"listed\", \
                 \"file_parts\": [\"file\"], \
-                \"featured\": false \
-                \"changelog\": $CHANGELOG_SAFE \
+                \"featured\": false, \
+                \"changelog\": $CHANGELOG \
               };type=application/json" \
               -F "file=@$JAR_NAME"
 

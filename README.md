@@ -9,12 +9,8 @@ This mod adds extra functionality to the native key binds screen. Simply click t
 
 ## Versions and Compatibility
 
-Created for Minecraft version 1.21.4, tested on versions 1.21+
-Most recently tested and working on 1.21.6!
-
-<br>
-
-> _Known compatibility issue with the mod "Controlling" which overrides the default MC controls screen. Current workaround is to disable Controlling, set extra key bindings with this mod, then reenable Controlling._
+Created for Minecraft version 1.21.4, tested on versions 1.20+ <br>
+Most recently tested and working on 1.21.8!
 
 <br>
 

@@ -1,6 +1,7 @@
 package us.kenny.core;
 
 import com.google.common.collect.ImmutableList;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
@@ -11,7 +12,6 @@ import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
 import net.minecraft.util.Formatting;
 import org.spongepowered.asm.mixin.Unique;
 import us.kenny.MultiKeyBindingManager;
@@ -79,35 +79,35 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
 
         // Render buttons
         int scrollbarX = this.parentList.getRowRight() + 6 + 2;
-        int buttonY = y - 2;
+        int buttonY = y;
 
-        int resetButtonX = scrollbarX - this.resetButton.getWidth() - 10;
-        this.resetButton.setPosition(resetButtonX, buttonY);
+        this.resetButton.setPosition(x + 190 + (FabricLoader.getInstance().isModLoaded("controlling") ? 20 : 0),
+                buttonY);
         this.resetButton.render(context, mouseX, mouseY, tickProgress);
 
-        int editButtonX = resetButtonX - this.editButton.getWidth() - 5;
-        this.editButton.setPosition(editButtonX, buttonY);
+        this.editButton.setPosition(x + 105, buttonY);
         this.editButton.render(context, mouseX, mouseY, tickProgress);
 
-        int removeKeyBindingButtonX = editButtonX - this.removeKeyBindingButton.getWidth() - 5;
-        this.removeKeyBindingButton.setPosition(removeKeyBindingButtonX, buttonY);
+        this.removeKeyBindingButton
+                .setPosition(scrollbarX - (FabricLoader.getInstance().isModLoaded("controlling") ? 110 : 180), buttonY);
         this.removeKeyBindingButton.render(context, mouseX, mouseY, tickProgress);
 
         // Render an arrow instead of action name
+        x = x + 90 - ((ControlsListWidgetAccessor) this.parentList).getMaxKeyNameLength();
         int leftOffset = 10;
         int topOffset = 5;
         int arrowLength = 20;
 
         context.fill(x + leftOffset, y + topOffset, x + leftOffset + arrowLength, y + topOffset + 1,
-                Colors.ALTERNATE_WHITE);
-        context.fill(x + leftOffset, y, x + leftOffset + 1, y + topOffset, Colors.ALTERNATE_WHITE);
+                -4539718);
+        context.fill(x + leftOffset, y, x + leftOffset + 1, y + topOffset, -4539718);
 
         int tipX = x + leftOffset + arrowLength;
         for (int i = 0; i <= 2; i++) {
             context.fill(tipX - i, y + topOffset - i, tipX - i + 1, y + topOffset - i + 1,
-                    Colors.ALTERNATE_WHITE);
+                    -4539718);
             context.fill(tipX - i, y + topOffset + i, tipX - i + 1, y + topOffset + i + 1,
-                    Colors.ALTERNATE_WHITE);
+                    -4539718);
         }
     }
 

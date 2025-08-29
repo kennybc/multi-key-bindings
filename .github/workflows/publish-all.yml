@@ -1,0 +1,75 @@
+name: Publish all versions
+
+on:
+  workflow_dispatch:
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  publish-modrinth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: sudo apt-get install -y jq
+
+      - name: Get all tags
+        id: get_tags
+        run: |
+          TAGS=$(git tag --list | sort -V)
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo "$TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Publish to Modrinth
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          TAGS=$(git tag --list "1.0.*" | sort -V)
+          for tag in $TAGS; do
+            echo "Checking release $tag"
+            
+            # Skip if already published
+            EXISTS=$(curl -s "https://api.modrinth.com/v2/project/multi-key-bindings/version" \
+              | jq -r ".[] | select(.version_number==\"$tag\") | .id")
+
+            if [ -n "$EXISTS" ]; then
+              echo "Already published to Modrinth: $tag"
+              continue
+            fi
+
+            echo "Publishing release $tag to Modrinth"
+            JAR_NAME="multi-key-bindings-${tag}.jar"
+            JAR=$(gh release view "$tag" --json assets -q '.assets[] | select(.name | endswith(".jar")) | .url')
+            curl -sL "$JAR" -o "$JAR_NAME"
+
+            echo "Publishing $tag to Modrinth"
+            VERSION=$(echo "$tag" | cut -d+ -f2)
+            curl -v -X POST "https://api.modrinth.com/v2/version" \
+              -H "Authorization: mrp_JJlijZ37OVf2rcl8ZhlFJR2R4Qh8704yCuxRXCe7FlyxAlqRvo95HvZy2Wb7" \
+              -F "data={ \
+                \"name\": \"$tag\", \
+                \"version_number\": \"$tag\", \
+                \"project_id\": \"2VF6JEnL\", \
+                \"dependencies\": [], \
+                \"game_versions\": [\"$VERSION\"], \
+                \"version_type\": \"release\", \
+                \"loaders\": [\"fabric\"], \
+                \"status\": \"listed\", \
+                \"file_parts\": [\"file\"], \
+                \"featured\": false \
+              };type=application/json" \
+              -F "file=@$JAR_NAME"
+
+          done

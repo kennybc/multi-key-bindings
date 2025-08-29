@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "package": "us.kenny.mixin.controlling",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "us.kenny.mixin.controlling.ControllingMixinPlugin",
+  "client": [
+    "ControllingConstantsMixin",
+    "CustomListAccessor",
+    "CustomListMixin",
+    "DisplayModeMixin",
+    "KeyEntryMixin",
+    "NewKeyBindsScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

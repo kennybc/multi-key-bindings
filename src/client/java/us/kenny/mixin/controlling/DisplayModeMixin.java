@@ -27,6 +27,10 @@ public abstract class DisplayModeMixin {
         throw new AssertionError(); // unreachable statement
     }
 
+    /**
+     * Overwrites the "CONFLICTING" enum: we need to check if it conflicts with
+     * custom key bindings as well.
+     */
     @Redirect(method = "<clinit>()V", at = @At(value = "NEW", ordinal = 2, target = "Lcom/blamejared/controlling/api/DisplayMode;<init>(Ljava/lang/String;ILjava/util/function/Predicate;)Lcom/blamejared/controlling/api/DisplayMode;"))
     private static DisplayMode onConflicting(String name, int id, Predicate<KeyEntry> predicate) {
         return init(name, id, entry -> {
@@ -41,6 +45,13 @@ public abstract class DisplayModeMixin {
         });
     }
 
+    /**
+     * Tests a custom key binding against the current display mode predicate.
+     * 
+     * @param multiKeyBinding The custom key binding we are testing.
+     * 
+     * @see us.kenny.core.MultiKeyBindingEntry#render
+     */
     @Unique
     private boolean testMultiKeyBinding(MultiKeyBinding multiKeyBinding) {
         DisplayMode self = (DisplayMode) (Object) this;
@@ -75,6 +86,12 @@ public abstract class DisplayModeMixin {
         }
     }
 
+    /**
+     * Controlling filters do not support our custom key bindings, so we need to
+     * introduce some special behavior and predicate testing.
+     * 
+     * @see us.kenny.mixin.controlling.NewKeyBindsScreenMixin#onFilterKeysSort
+     */
     @ModifyReturnValue(method = "getPredicate", at = @At("RETURN"))
     private Predicate<ControlsListWidget.Entry> onGetPredicate(Predicate<ControlsListWidget.Entry> original) {
 

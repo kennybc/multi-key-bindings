@@ -70,6 +70,9 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
         return this.multiKeyBinding;
     }
 
+    /**
+     * Renders our custom entry in the list of key bindings.
+     */
     @Override
     public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX,
             int mouseY, boolean hovered, float tickProgress) {
@@ -90,7 +93,7 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
         this.removeKeyBindingButton.setPosition(removeKeyBindingButtonX, buttonY);
         this.removeKeyBindingButton.render(context, mouseX, mouseY, tickProgress);
 
-        // Render arrow instead of action name
+        // Render an arrow instead of action name
         int leftOffset = 10;
         int topOffset = 5;
         int arrowLength = 20;
@@ -108,6 +111,10 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
         }
     }
 
+    /**
+     * Checks for duplicates and updates buttons to reflect selection status and
+     * duplication key bindings.
+     */
     @Override
     public void update() {
         this.editButton.setMessage(this.multiKeyBinding.getKey().getLocalizedText());

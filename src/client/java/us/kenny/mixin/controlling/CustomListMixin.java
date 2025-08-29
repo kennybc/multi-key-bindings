@@ -19,6 +19,11 @@ import java.util.Collection;
 @Mixin(value = CustomList.class, remap = false)
 public abstract class CustomListMixin {
 
+    /**
+     * Injected in the getAllEntries method:
+     * This is called when filters are changed, so we need to restore all button
+     * visibility and then redetermine their visibility from the new filters.
+     */
     @Inject(method = "getAllEntries", at = @At("HEAD"))
     private void onGetAllEntries(CallbackInfoReturnable<Integer> cir) {
         CustomList self = (CustomList) (Object) this;
@@ -29,6 +34,9 @@ public abstract class CustomListMixin {
         });
     }
 
+    /**
+     * @see us.kenny.core.controlling.ControllingMultiKeyBindingEntry
+     */
     @Inject(method = "addEntry", at = @At("TAIL"))
     private void onAddEntry(ControlsListWidget.Entry entry, CallbackInfoReturnable<Integer> cir) {
         if (!(entry instanceof KeyEntry))

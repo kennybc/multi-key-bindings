@@ -35,6 +35,10 @@ public abstract class KeybindsScreenMixin implements MultiKeyBindingScreen {
         this.selectedMultiKeyBinding = multiKeyBinding;
     }
 
+    /**
+     * Injected in the method mouseClicked:
+     * Updates selected custom key binding with whatever mouse button was pressed.
+     */
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
         if (this.selectedMultiKeyBinding != null) {
@@ -47,6 +51,10 @@ public abstract class KeybindsScreenMixin implements MultiKeyBindingScreen {
         }
     }
 
+    /**
+     * Injected in the method keyPressed:
+     * Updates selected custom key binding with whatever key was pressed.
+     */
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     public void onKeyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
         if (this.selectedMultiKeyBinding != null) {

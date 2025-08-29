@@ -25,6 +25,17 @@ public abstract class NewKeyBindsScreenMixin extends KeybindsScreen {
         super(screen, settings);
     }
 
+    /**
+     * Controlling sorting does not support our custom key bindings, so we need to:
+     * (1)
+     * During the filter, include any native key bindings whose associated custom
+     * key bindings (bindings to the same action) pass the filter.
+     * (2)
+     * Sort the native entries, but keep track of the relationships to custom key
+     * bindings.
+     * (3)
+     * Once sorting is complete, add the custom key bindings back in place.
+     */
     @WrapOperation(method = "Lcom/blamejared/controlling/client/NewKeyBindsScreen;filterKeys(Ljava/lang/String;)V", at = @At(value = "INVOKE", target = "Ljava/util/function/Consumer;accept(Ljava/lang/Object;)V"))
     private void onFilterKeysSort(Consumer<List<ControlsListWidget.Entry>> postConsumer,
             Object allEntries,

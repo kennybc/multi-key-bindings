@@ -17,6 +17,9 @@ import us.kenny.core.MultiKeyBindingEntry;
 import java.util.Optional;
 import java.util.function.Function;
 
+/**
+ * Need this to filter our custom key bindings properly.
+ */
 @Mixin(value = ControllingConstants.class, remap = false)
 public class ControllingConstantsMixin {
 

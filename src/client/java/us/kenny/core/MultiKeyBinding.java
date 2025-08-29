@@ -4,6 +4,10 @@ import net.minecraft.client.util.InputUtil;
 
 import java.util.UUID;
 
+/**
+ * Need to create this class to mimic a KeyBinding because the native KeyBinding
+ * constructor will overwrite existing keys bound to that action.
+ */
 public class MultiKeyBinding {
 
     private final UUID id;

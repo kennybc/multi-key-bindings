@@ -5,6 +5,9 @@ import net.minecraft.client.util.InputUtil;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 
+/**
+ * Only used for sprint and sneak.
+ */
 public class StickyMultiKeyBinding extends MultiKeyBinding {
     private final BooleanSupplier toggleGetter;
 

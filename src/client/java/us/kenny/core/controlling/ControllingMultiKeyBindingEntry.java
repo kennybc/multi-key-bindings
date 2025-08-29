@@ -1,10 +1,13 @@
-package us.kenny.core;
+package us.kenny.core.controlling;
 
 import com.blamejared.controlling.client.CustomList;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import us.kenny.MultiKeyBindingManager;
+import us.kenny.core.MultiKeyBinding;
+import us.kenny.core.MultiKeyBindingEntry;
+import us.kenny.core.MultiKeyBindingScreen;
 import us.kenny.mixin.ControlsListWidgetAccessor;
 
 public class ControllingMultiKeyBindingEntry extends MultiKeyBindingEntry {
@@ -14,6 +17,11 @@ public class ControllingMultiKeyBindingEntry extends MultiKeyBindingEntry {
         this.parentScreen = ((MultiKeyBindingScreen) ((ControlsListWidgetAccessor) customList)
                 .getParent());
 
+        /*
+         * Controlling stores a persistent copy of all entries because it modifies the
+         * displayed list during filter. Therefore the remove key binding button must
+         * also remove from this list.
+         */
         this.removeKeyBindingButton = ButtonWidget
                 .builder(Text.literal("\uD83D\uDDD1").formatted(Formatting.RED),
                         (button) -> {

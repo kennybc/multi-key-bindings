@@ -5,8 +5,11 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.Selectable;
 import net.minecraft.client.gui.screen.option.ControlsListWidget;
+import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Colors;
 import net.minecraft.util.Formatting;
@@ -20,6 +23,7 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
     protected final ControlsListWidget parentList;
     protected MultiKeyBindingScreen parentScreen;
     private final MultiKeyBinding multiKeyBinding;
+    private boolean duplicate;
 
     private final ButtonWidget editButton;
     private final ButtonWidget resetButton;
@@ -108,6 +112,46 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
     public void update() {
         this.editButton.setMessage(this.multiKeyBinding.getKey().getLocalizedText());
         this.resetButton.active = !this.multiKeyBinding.getKey().equals(InputUtil.UNKNOWN_KEY);
+        this.duplicate = false;
+
+        MutableText duplicates = Text.empty();
+        if (!this.multiKeyBinding.getKey().equals(InputUtil.UNKNOWN_KEY)) {
+            for (KeyBinding kb : MultiKeyBindingManager.getGameOptions().allKeys) {
+                if (!kb.isUnbound() && kb.getBoundKeyTranslationKey()
+                        .equals(this.multiKeyBinding.getKey().getTranslationKey())) {
+                    if (this.duplicate) {
+                        duplicates.append(", ");
+                    }
+
+                    this.duplicate = true;
+                    duplicates.append(Text.translatable(kb.getTranslationKey()));
+                }
+            }
+
+            for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
+                if (!mkb.getId().equals(this.multiKeyBinding.getId()) && !mkb.getKey().equals(InputUtil.UNKNOWN_KEY) &&
+                        mkb.getKey().getTranslationKey()
+                                .equals(this.multiKeyBinding.getKey().getTranslationKey())) {
+                    if (this.duplicate) {
+                        duplicates.append(", ");
+                    }
+
+                    this.duplicate = true;
+                    duplicates.append(Text.translatable(mkb.getAction().replaceFirst("^multi.", "")));
+                }
+            }
+        }
+
+        if (this.duplicate) {
+            this.editButton
+                    .setMessage(
+                            Text.literal("[ ").append(this.editButton.getMessage().copy().formatted(Formatting.WHITE))
+                                    .append(" ]").formatted(Formatting.RED));
+            this.editButton.setTooltip(
+                    Tooltip.of(Text.translatable("controls.keybinds.duplicateKeybinds", new Object[] { duplicates })));
+        } else {
+            this.editButton.setTooltip(null);
+        }
 
         if (this.parentScreen.getSelectedMultiKeyBinding() == this.multiKeyBinding) {
             this.editButton

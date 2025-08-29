@@ -9,14 +9,25 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import us.kenny.MultiKeyBindingManager;
-import us.kenny.core.ControllingMultiKeyBindingEntry;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
+import us.kenny.core.controlling.ControllingHideableKeyEntry;
+import us.kenny.core.controlling.ControllingMultiKeyBindingEntry;
 
 import java.util.Collection;
 
 @Mixin(value = CustomList.class, remap = false)
 public abstract class CustomListMixin {
+
+    @Inject(method = "getAllEntries", at = @At("HEAD"))
+    private void onGetAllEntries(CallbackInfoReturnable<Integer> cir) {
+        CustomList self = (CustomList) (Object) this;
+        self.allEntries.forEach(entry -> {
+            if (entry instanceof ControllingHideableKeyEntry hideableKeyEntry) {
+                hideableKeyEntry.setHidden(false);
+            }
+        });
+    }
 
     @Inject(method = "addEntry", at = @At("TAIL"))
     private void onAddEntry(ControlsListWidget.Entry entry, CallbackInfoReturnable<Integer> cir) {

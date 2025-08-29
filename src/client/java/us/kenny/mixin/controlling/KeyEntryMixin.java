@@ -27,7 +27,7 @@ import us.kenny.core.controlling.ControllingMultiKeyBindingEntry;
 
 import java.util.List;
 
-@Mixin(value = KeyEntry.class, remap = false)
+@Mixin(KeyEntry.class)
 public abstract class KeyEntryMixin extends ControlsListWidget.Entry implements ControllingHideableKeyEntry {
     @Final
     @Shadow
@@ -72,7 +72,7 @@ public abstract class KeyEntryMixin extends ControlsListWidget.Entry implements 
     /**
      * @see us.kenny.mixin.KeyBindingEntryMixin#onInit
      */
-    @Inject(method = "<init>(Lcom/blamejared/controlling/client/NewKeyBindsList;Lnet/minecraft/client/option/KeyBinding;Lnet/minecraft/text/Text;)V", at = @At("TAIL"), remap = false)
+    @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(NewKeyBindsList newKeyBindsList, KeyBinding keyBinding, Text bindingName, CallbackInfo ci) {
         this.self = (KeyEntry) (Object) this;
         this.hidden = false;

@@ -5,12 +5,15 @@
 
 This mod adds extra functionality to the native key binds screen. Simply click the "+" button next to any key binding and a new binding for the selected action should appear.
 
-![Keybinds Settings](https://cdn.modrinth.com/data/2VF6JEnL/images/c1ec154b3a146d03fce57bf6135a9772041e95e6.png)
+![Keybinds Settings](https://cdn.modrinth.com/data/cached_images/3cf21f79c42ea4c4bfaa9e1083925266d6c8849b_0.webp)
 
 ## Versions and Compatibility
 
-Created for Minecraft version 1.21.4, tested on versions 1.20+ <br>
-Most recently tested and working on 1.21.8!
+Created for Minecraft versions 1.20.x and 1.21.x
+
+<br>
+
+> _As of MKB version 1.1.0, this is now compatible with Controlling, so you can search and sort all your key bindings in the same screen._
 
 <br>
 

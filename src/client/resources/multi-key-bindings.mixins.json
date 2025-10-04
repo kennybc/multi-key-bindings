@@ -9,7 +9,6 @@
     "KeyBindingEntryAccessor",
     "KeyBindingEntryMixin",
     "KeyBindingMixin",
-    "KeybindsScreenAccessor",
     "KeybindsScreenMixin"
   ],
   "injectors": {

@@ -3,6 +3,7 @@ package us.kenny.mixin;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.option.ControlsListWidget;
 import net.minecraft.client.gui.screen.option.KeybindsScreen;
+import net.minecraft.client.gui.widget.EntryListWidget;
 import net.minecraft.client.option.KeyBinding;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -12,10 +13,15 @@ import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 @Mixin(ControlsListWidget.class)
-public abstract class ControlsListWidgetMixin {
+public abstract class ControlsListWidgetMixin extends EntryListWidget<ControlsListWidget.Entry> {
+
+    public ControlsListWidgetMixin(MinecraftClient client, int width, int height, int y, int itemHeight) {
+        super(client, width, height, y, itemHeight);
+    }
 
     /**
      * Injected in the constructor:
@@ -25,23 +31,27 @@ public abstract class ControlsListWidgetMixin {
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(KeybindsScreen parent, MinecraftClient client, CallbackInfo ci) {
         ControlsListWidget self = (ControlsListWidget) (Object) this;
-        for (int i = self.children().size() - 1; i >= 0; i--) {
+
+        Collection<ControlsListWidget.Entry> entries = new ArrayList<ControlsListWidget.Entry>();
+        for (int i = 0; i < self.children().size(); i++) {
             ControlsListWidget.Entry entry = self.children().get(i);
 
-            if (!(entry instanceof ControlsListWidget.KeyBindingEntry))
-                continue;
+            entries.add(entry);
+            if (entry instanceof ControlsListWidget.KeyBindingEntry) {
+                KeyBinding keyBinding = ((KeyBindingEntryAccessor) entry).getBinding();
 
-            KeyBinding keyBinding = ((KeyBindingEntryAccessor) entry).getBinding();
+                // Create and insert a MultiKeyBindingEntry for any custom bindings
+                Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager
+                        .getKeyBindings(keyBinding.getId());
+                for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
+                    multiKeyBinding.setCategory(keyBinding.getCategory());
+                    MultiKeyBindingEntry multiKeyBindingEntry = new MultiKeyBindingEntry(self, multiKeyBinding);
 
-            // Create and insert a MultiKeyBindingEntry for any custom bindings
-            Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager
-                    .getKeyBindings(keyBinding.getTranslationKey());
-            for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-                multiKeyBinding.setCategory(keyBinding.getCategory());
-                MultiKeyBindingEntry multiKeyBindingEntry = new MultiKeyBindingEntry(self, multiKeyBinding);
-                self.children().add(i + 1, multiKeyBindingEntry);
+                    entries.add(multiKeyBindingEntry);
+                }
             }
-
         }
+
+        this.replaceEntries(entries);
     }
 }

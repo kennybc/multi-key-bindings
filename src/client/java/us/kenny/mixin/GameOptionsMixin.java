@@ -14,7 +14,7 @@ import java.io.File;
 @Mixin(GameOptions.class)
 public class GameOptionsMixin {
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void afterOptionsInit(MinecraftClient client, File file, CallbackInfo ci) {
+    private void afterOptionsInit(MinecraftClient client, File optionsFile, CallbackInfo ci) {
         MultiKeyBindingManager.setGameOptions((GameOptions) (Object) this);
         ConfigManager.loadConfigFile();
     }

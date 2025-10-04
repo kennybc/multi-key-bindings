@@ -1,5 +1,6 @@
 package us.kenny.core;
 
+import net.minecraft.client.option.KeyBinding.Category;
 import net.minecraft.client.util.InputUtil;
 
 import java.util.UUID;
@@ -12,13 +13,13 @@ public class MultiKeyBinding {
 
     private final UUID id;
     private final String action;
-    private String category;
+    private Category category;
     private InputUtil.Key key;
 
     private boolean pressed;
     private int timesPressed;
 
-    public MultiKeyBinding(UUID id, String action, String category, InputUtil.Key key) {
+    public MultiKeyBinding(UUID id, String action, Category category, InputUtil.Key key) {
         this.id = id;
         this.action = action;
         this.category = category;
@@ -38,11 +39,11 @@ public class MultiKeyBinding {
         return this.action;
     }
 
-    public String getCategory() {
+    public Category getCategory() {
         return this.category;
     }
 
-    public void setCategory(String category) {
+    public void setCategory(Category category) {
         this.category = category;
     }
 

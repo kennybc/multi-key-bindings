@@ -1,6 +1,8 @@
 package us.kenny.mixin;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.Click;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,10 +20,7 @@ import java.util.Collection;
 @Mixin(KeyBinding.class)
 public abstract class KeyBindingMixin {
     @Shadow
-    public abstract String getTranslationKey();
-
-    @Shadow
-    public abstract String getCategory();
+    public abstract String getId();
 
     /**
      * This covers mocking functionality in "on-demand" actions, where an
@@ -53,7 +52,7 @@ public abstract class KeyBindingMixin {
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             if (multiKeyBinding.getKey().getCategory() == InputUtil.Type.KEYSYM
                     && multiKeyBinding.getKey().getCode() != InputUtil.UNKNOWN_KEY.getCode()) {
-                multiKeyBinding.setPressed(InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(),
+                multiKeyBinding.setPressed(InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow(),
                         multiKeyBinding.getKey().getCode()));
             }
         }
@@ -79,7 +78,7 @@ public abstract class KeyBindingMixin {
 
     @Inject(method = "isPressed", at = @At("HEAD"), cancellable = true)
     private void onIsPressed(CallbackInfoReturnable<Boolean> cir) {
-        Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getTranslationKey());
+        Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getId());
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             if (multiKeyBinding.getPressed()) {
                 cir.setReturnValue(true);
@@ -91,7 +90,7 @@ public abstract class KeyBindingMixin {
 
     @Inject(method = "wasPressed", at = @At("HEAD"), cancellable = true)
     private void onWasPressed(CallbackInfoReturnable<Boolean> cir) {
-        Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getTranslationKey());
+        Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getId());
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             if (multiKeyBinding.getTimesPressed() != 0) {
                 multiKeyBinding.decrementTimesPressed();
@@ -111,13 +110,13 @@ public abstract class KeyBindingMixin {
     }
 
     @Inject(method = "matchesKey", at = @At("HEAD"), cancellable = true)
-    private void onMatchesKey(int keyCode, int scanCode, CallbackInfoReturnable<Boolean> cir) {
-        Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getTranslationKey());
+    private void onMatchesKey(KeyInput key, CallbackInfoReturnable<Boolean> cir) {
+        Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getId());
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-            InputUtil.Key key = multiKeyBinding.getKey();
-            boolean matches = keyCode == InputUtil.UNKNOWN_KEY.getCode()
-                    ? key.getCategory() == InputUtil.Type.SCANCODE && key.getCode() == scanCode
-                    : key.getCategory() == InputUtil.Type.KEYSYM && key.getCode() == keyCode;
+            InputUtil.Key multiKey = multiKeyBinding.getKey();
+            boolean matches = key.key() == InputUtil.UNKNOWN_KEY.getCode()
+                    ? multiKey.getCategory() == InputUtil.Type.SCANCODE && multiKey.getCode() == key.scancode()
+                    : multiKey.getCategory() == InputUtil.Type.KEYSYM && multiKey.getCode() == key.key();
             if (matches) {
                 cir.setReturnValue(true);
                 cir.cancel();
@@ -127,11 +126,11 @@ public abstract class KeyBindingMixin {
     }
 
     @Inject(method = "matchesMouse", at = @At("HEAD"), cancellable = true)
-    private void onMatchesMouse(int code, CallbackInfoReturnable<Boolean> cir) {
-        Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getTranslationKey());
+    private void onMatchesMouse(Click click, CallbackInfoReturnable<Boolean> cir) {
+        Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getId());
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-            InputUtil.Key key = multiKeyBinding.getKey();
-            boolean matches = key.getCategory() == InputUtil.Type.MOUSE && key.getCode() == code;
+            InputUtil.Key multiKey = multiKeyBinding.getKey();
+            boolean matches = multiKey.getCategory() == InputUtil.Type.MOUSE && multiKey.getCode() == click.button();
             if (matches) {
                 cir.setReturnValue(true);
                 cir.cancel();

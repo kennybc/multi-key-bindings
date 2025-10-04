@@ -17,6 +17,7 @@ import org.spongepowered.asm.mixin.Unique;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.mixin.ControlsListWidgetAccessor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
@@ -56,7 +57,11 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
                         (button) -> {
                             MultiKeyBindingManager.removeKeyBinding(multiKeyBinding);
                             this.parentScreen.setSelectedMultiKeyBinding(null);
-                            this.parentList.children().remove(this);
+
+                            List<ControlsListWidget.Entry> entries = new ArrayList<>(this.parentList.children());
+                            entries.remove(this);
+                            this.parentList.replaceEntries(entries);
+
                             this.parentList.update();
                         })
                 .size(20, 20)
@@ -74,39 +79,41 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
      * Renders our custom entry in the list of key bindings.
      */
     @Override
-    public void render(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX,
-            int mouseY, boolean hovered, float tickProgress) {
-
+    public void render(DrawContext context, int mouseX, int mouseY, boolean hovered, float deltaTicks) {
         // Render buttons
         int scrollbarX = this.parentList.getRowRight() + 6 + 2;
-        int buttonY = y - 2;
+        int contentX = this.getContentX();
+        int contentY = this.getContentY();
+        int buttonY = contentY - 2;
 
         int resetButtonX = scrollbarX - this.resetButton.getWidth() - 10;
         this.resetButton.setPosition(resetButtonX, buttonY);
-        this.resetButton.render(context, mouseX, mouseY, tickProgress);
+        this.resetButton.render(context, mouseX, mouseY, deltaTicks);
 
         int editButtonX = resetButtonX - this.editButton.getWidth() - 5;
         this.editButton.setPosition(editButtonX, buttonY);
-        this.editButton.render(context, mouseX, mouseY, tickProgress);
+        this.editButton.render(context, mouseX, mouseY, deltaTicks);
 
         int removeKeyBindingButtonX = editButtonX - this.removeKeyBindingButton.getWidth() - 5;
         this.removeKeyBindingButton.setPosition(removeKeyBindingButtonX, buttonY);
-        this.removeKeyBindingButton.render(context, mouseX, mouseY, tickProgress);
+        this.removeKeyBindingButton.render(context, mouseX, mouseY, deltaTicks);
 
         // Render an arrow instead of action name
         int leftOffset = 10;
         int topOffset = 5;
         int arrowLength = 20;
 
-        context.fill(x + leftOffset, y + topOffset, x + leftOffset + arrowLength, y + topOffset + 1,
+        context.fill(contentX + leftOffset, contentY + topOffset, contentX + leftOffset + arrowLength,
+                contentY + topOffset + 1,
                 Colors.ALTERNATE_WHITE);
-        context.fill(x + leftOffset, y, x + leftOffset + 1, y + topOffset, Colors.ALTERNATE_WHITE);
+        context.fill(contentX + leftOffset, contentY, contentX + leftOffset + 1, contentY + topOffset,
+                Colors.ALTERNATE_WHITE);
 
-        int tipX = x + leftOffset + arrowLength;
+        int tipX = contentX + leftOffset + arrowLength;
         for (int i = 0; i <= 2; i++) {
-            context.fill(tipX - i, y + topOffset - i, tipX - i + 1, y + topOffset - i + 1,
+            context.fill(tipX - i, contentY + topOffset - i, tipX - i + 1, contentY + topOffset - i + 1,
                     Colors.ALTERNATE_WHITE);
-            context.fill(tipX - i, y + topOffset + i, tipX - i + 1, y + topOffset + i + 1,
+            context.fill(tipX - i, contentY + topOffset + i, tipX - i + 1, contentY + topOffset + i + 1,
                     Colors.ALTERNATE_WHITE);
         }
     }
@@ -131,7 +138,7 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
                     }
 
                     this.duplicate = true;
-                    duplicates.append(Text.translatable(kb.getTranslationKey()));
+                    duplicates.append(Text.translatable(kb.getId()));
                 }
             }
 

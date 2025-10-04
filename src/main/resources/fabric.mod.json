@@ -21,10 +21,6 @@
   },
   "mixins": [
     {
-      "config": "multi-key-bindings.controlling.mixins.json",
-      "environment": "client"
-    },
-    {
       "config": "multi-key-bindings.mixins.json",
       "environment": "client"
     }
@@ -32,7 +28,7 @@
   "accessWidener": "multi-key-bindings.accesswidener",
   "depends": {
     "fabricloader": ">=0.16.10",
-    "minecraft": "=1.21.8",
+    "minecraft": "=1.21.9",
     "java": ">=21",
     "fabric-api": "*"
   }

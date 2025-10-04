@@ -1,5 +1,6 @@
 package us.kenny.core;
 
+import net.minecraft.client.option.KeyBinding.Category;
 import net.minecraft.client.util.InputUtil;
 
 import java.util.UUID;
@@ -11,7 +12,7 @@ import java.util.function.BooleanSupplier;
 public class StickyMultiKeyBinding extends MultiKeyBinding {
     private final BooleanSupplier toggleGetter;
 
-    public StickyMultiKeyBinding(UUID id, String action, String category, InputUtil.Key key,
+    public StickyMultiKeyBinding(UUID id, String action, Category category, InputUtil.Key key,
             BooleanSupplier toggleGetter) {
         super(id, action, category, key);
         this.toggleGetter = toggleGetter;

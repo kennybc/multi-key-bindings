@@ -49,12 +49,6 @@ jobs:
             MOD_VERSION=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)
             echo "Using mod version: $MOD_VERSION"
 
-            # Skip if release already exists
-            if gh release view "$MOD_VERSION" >/dev/null 2>&1; then
-                echo "Release $MOD_VERSION already exists. Skipping branch $b."
-                continue
-            fi
-
             # Create tag if it doesn't exist
             if ! git rev-parse "refs/tags/$MOD_VERSION" >/dev/null 2>&1; then
                 git tag "$MOD_VERSION"
@@ -68,17 +62,33 @@ jobs:
               CHANGELOG="Release for Minecraft $b"
             fi
 
-            # Create release
-            gh release create "$MOD_VERSION" \
-              --title "Release $MOD_VERSION" \
-              --notes "$CHANGELOG" \
-              --draft=false \
-              --prerelease=false
+            # Check if release exists
+            if ! gh release view "$MOD_VERSION" >/dev/null 2>&1; then
+                echo "Release does not exist, creating..."
+                gh release create "$MOD_VERSION" \
+                  --title "Release $MOD_VERSION" \
+                  --notes "$CHANGELOG" \
+                  --draft=false \
+                  --prerelease=false
+            fi
+
+            # Skip if the release already has a jar attached
+            JAR_ATTACHED=$(gh release view "$MOD_VERSION" --json assets -q '.assets[].name' | grep -E '\.jar$' || true)
+            if [ -n "$JAR_ATTACHED" ]; then
+                echo "JAR already attached to release $MOD_VERSION, skipping upload."
+                continue
+            fi
 
             # Build the mod JAR
             ./gradlew build
 
-            # Attach the build mod jar
+            # Find built jar
             JAR_PATH=$(ls build/libs/*"$MOD_VERSION"*.jar | grep -v 'sources' | head -n1)
+            if [ -z "$JAR_PATH" ]; then
+              echo "Error: Could not find built JAR for version $MOD_VERSION"
+              exit 1
+            fi
+
+            # Upload the jar
             gh release upload "$MOD_VERSION" "$JAR_PATH" --clobber
           done

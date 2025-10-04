@@ -73,8 +73,8 @@ public class ConfigManager {
                 String action = keyBindingJson.get("action").getAsString();
                 String translationKey = keyBindingJson.get("key").getAsString();
 
-                // Empty category, it will be filled in later
-                MultiKeyBindingManager.addKeyBinding(action, "", translationKey, id);
+                // Empty category since unknown at startup, it will be filled in late
+                MultiKeyBindingManager.addKeyBinding(action, null, translationKey, id);
             }
 
             if (migrated) {

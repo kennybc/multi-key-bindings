@@ -8,6 +8,7 @@ import net.minecraft.client.gui.screen.option.ControlsListWidget;
 import net.minecraft.client.gui.screen.option.ControlsListWidget.KeyBindingEntry;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -20,6 +21,7 @@ import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Mixin(ControlsListWidget.KeyBindingEntry.class)
@@ -48,12 +50,14 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
     @Unique
     private void createCustomKeyBinding() {
         MultiKeyBinding multiKeyBinding = MultiKeyBindingManager.addKeyBinding(
-                binding.getTranslationKey(),
+                binding.getId(),
                 binding.getCategory(),
-                "key.keyboard.unknown");
-
+                InputUtil.UNKNOWN_KEY);
         MultiKeyBindingEntry multiKeyBindingEntry = new MultiKeyBindingEntry(controlsListWidget, multiKeyBinding);
-        controlsListWidget.children().add(controlsListWidget.children().indexOf(this.self) + 1, multiKeyBindingEntry);
+
+        List<ControlsListWidget.Entry> entries = new ArrayList<>(controlsListWidget.children());
+        entries.add(controlsListWidget.children().indexOf(this.self) + 1, multiKeyBindingEntry);
+        controlsListWidget.replaceEntries(entries);
     }
 
     /**
@@ -78,15 +82,16 @@ public abstract class KeyBindingEntryMixin extends ControlsListWidget.Entry {
      * Renders our custom "+" button in native key binding entries.
      */
     @Inject(method = "render", at = @At("TAIL"))
-    private void onRender(DrawContext context, int index, int y, int x, int entryWidth, int entryHeight, int mouseX,
-            int mouseY, boolean hovered, float tickDelta, CallbackInfo ci) {
+    private void onRender(DrawContext context, int mouseX, int mouseY, boolean hovered, float deltaTicks,
+            CallbackInfo ci) {
         // Mimic the positioning and layout of the existing buttons
         int scrollbarX = controlsListWidget.getRowRight() + 6 + 2;
         int buttonX = scrollbarX - 165; // 5 wide gap between buttons, 20 wide "+" button
-        int buttonY = y - 2; // Align with the existing buttons
+        int buttonY = this.getContentY() - 2;
+        ; // Align with the existing buttons
 
         addKeyBindingButton.setPosition(buttonX, buttonY);
-        addKeyBindingButton.render(context, mouseX, mouseY, tickDelta);
+        addKeyBindingButton.render(context, mouseX, mouseY, deltaTicks);
     }
 
     /**

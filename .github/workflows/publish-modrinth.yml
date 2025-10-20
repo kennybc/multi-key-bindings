@@ -1,4 +1,4 @@
-name: Publish all versions
+name: Publish all versions (Modrinth)
 
 on:
   workflow_dispatch:
@@ -57,8 +57,8 @@ jobs:
             JAR=$(gh release view "$tag" --json assets -q '.assets[] | select(.name | endswith(".jar")) | .url')
             curl -sL "$JAR" -o "$JAR_NAME"
 
-            echo "Publishing $tag to Modrinth"
             VERSION=$(echo "$tag" | cut -d+ -f2)
+
             curl -v -X POST "https://api.modrinth.com/v2/version" \
               -H "Authorization: $MODRINTH_TOKEN" \
               -F "data={ \

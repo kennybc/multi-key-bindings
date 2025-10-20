@@ -1,0 +1,85 @@
+name: Publish all versions (CurseForge)
+
+on:
+  workflow_dispatch:
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  publish-curseforge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: sudo apt-get install -y jq
+
+      - name: Get all tags
+        id: get_tags
+        run: |
+          TAGS=$(git tag --list | sort -V)
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo "$TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Publish to CurseForge
+        env:
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          CURSEFORGE_AUTHOR_TOKEN: ${{ secrets.CURSEFORGE_AUTHOR_TOKEN }}
+        run: |
+          GAME_VERSIONS=$(curl -s -H "X-Api-Token: $CURSEFORGE_AUTHOR_TOKEN" "https://minecraft.curseforge.com/api/game/versions")
+
+          TAGS=$(git tag --list | sort -V)
+          for tag in $TAGS; do
+            echo "Checking release $tag"
+            
+            # Skip if already published
+            EXISTS=$(curl -s -H "x-api-token: $CURSEFORGE_TOKEN" \
+              "https://api.curseforge.com/v1/mods/1364298/files" \
+              | jq -r ".data[] | select(.displayName==\"$tag\") | .id")
+
+            if [ -n "$EXISTS" ]; then
+              echo "Already published to CurseForge: $tag"
+              continue
+            fi
+
+            echo "Fetching release notes for $tag"
+            CHANGELOG=$(gh release view "$tag" --json body -q '.body' | jq -Rs .)
+
+            echo "Publishing release $tag to CurseForge"
+            JAR_NAME="multi-key-bindings-${tag}.jar"
+            JAR=$(gh release view "$tag" --json assets -q '.assets[] | select(.name | endswith(".jar")) | .url')
+            curl -sL "$JAR" -o "$JAR_NAME"
+
+            VERSION=$(echo "$tag" | cut -d+ -f2)
+            VERSION_ID=$(echo "$GAME_VERSIONS" | jq -r ".[] | select(.name==\"$VERSION\") | .id" | head -n1)
+
+            if [ -z "$VERSION_ID" ]; then
+              echo "Could not find CurseForge ID for Minecraft version $VERSION"
+              continue
+            fi
+
+            METADATA="{\
+            \"changelog\": $CHANGELOG, \
+            \"changelogType\": \"markdown\", \
+            \"displayName\": \"$tag\", \
+            \"releaseType\": \"release\", \
+            \"gameVersions\": [$VERSION_ID], \
+            }"
+
+            curl -v -X POST "https://minecraft.curseforge.com/api/projects/1364298/upload-file" \
+              -H "X-Api-Token: $CURSEFORGE_AUTHOR_TOKEN" \
+              -F "metadata=$METADATA;type=application/json" \
+              -F "file=@$JAR_NAME"
+
+          done

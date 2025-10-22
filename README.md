@@ -1,5 +1,5 @@
 # Multi Key Bindings
-[**Github**](https://github.com/kennybc/multi-key-bindings) • [**Modrinth**](https://modrinth.com/mod/multi-key-bindings)
+[**Github**](https://github.com/kennybc/multi-key-bindings) • [**Modrinth**](https://modrinth.com/mod/multi-key-bindings) • [**CurseForge**](https://www.curseforge.com/minecraft/mc-mods/multi-key-bindings)
 
 **Allows players to create multiple keybindings for the same action/function.**
 
@@ -13,7 +13,7 @@ Created for Minecraft versions 1.20.x and 1.21.x
 
 <br>
 
-> _As of MKB version 1.1.0 (exlcuding for Minecraft 1.21.9 as I wait for Controlling to update as well), this is now compatible with Controlling, so you can search and sort all your key bindings in the same screen._
+> _As of MKB version 1.1.0 (exlcuding for Minecraft 1.21.9+ as I wait for Controlling to update as well), this is now compatible with Controlling, so you can search and sort all your key bindings in the same screen._
 
 <br>
 

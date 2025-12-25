@@ -1,10 +1,5 @@
 package us.kenny.mixin;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.option.ControlsListWidget;
-import net.minecraft.client.gui.screen.option.KeybindsScreen;
-import net.minecraft.client.gui.widget.EntryListWidget;
-import net.minecraft.client.option.KeyBinding;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -15,11 +10,16 @@ import us.kenny.core.MultiKeyBindingEntry;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.AbstractSelectionList;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 
-@Mixin(ControlsListWidget.class)
-public abstract class ControlsListWidgetMixin extends EntryListWidget<ControlsListWidget.Entry> {
+@Mixin(KeyBindsList.class)
+public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsList.Entry> {
 
-    public ControlsListWidgetMixin(MinecraftClient client, int width, int height, int y, int itemHeight) {
+    public KeyBindsListMixin(Minecraft client, int width, int height, int y, int itemHeight) {
         super(client, width, height, y, itemHeight);
     }
 
@@ -29,20 +29,20 @@ public abstract class ControlsListWidgetMixin extends EntryListWidget<ControlsLi
      * bindings in the game settings.
      */
     @Inject(method = "<init>", at = @At("TAIL"))
-    private void onInit(KeybindsScreen parent, MinecraftClient client, CallbackInfo ci) {
-        ControlsListWidget self = (ControlsListWidget) (Object) this;
+    private void onInit(KeyBindsScreen keyBindsScreen, Minecraft client, CallbackInfo ci) {
+        KeyBindsList self = (KeyBindsList) (Object) this;
 
-        Collection<ControlsListWidget.Entry> entries = new ArrayList<ControlsListWidget.Entry>();
+        Collection<KeyBindsList.Entry> entries = new ArrayList<KeyBindsList.Entry>();
         for (int i = 0; i < self.children().size(); i++) {
-            ControlsListWidget.Entry entry = self.children().get(i);
+            KeyBindsList.Entry entry = self.children().get(i);
 
             entries.add(entry);
-            if (entry instanceof ControlsListWidget.KeyBindingEntry) {
-                KeyBinding keyBinding = ((KeyBindingEntryAccessor) entry).getBinding();
+            if (entry instanceof KeyBindsList.KeyEntry) {
+                KeyMapping keyBinding = ((KeyBindsListEntryAccessor) entry).getKeyMapping();
 
                 // Create and insert a MultiKeyBindingEntry for any custom bindings
                 Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager
-                        .getKeyBindings(keyBinding.getId());
+                        .getKeyBindings(keyBinding.getName());
                 for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
                     multiKeyBinding.setCategory(keyBinding.getCategory());
                     MultiKeyBindingEntry multiKeyBindingEntry = new MultiKeyBindingEntry(self, multiKeyBinding);

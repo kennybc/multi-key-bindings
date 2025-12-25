@@ -4,8 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.util.InputUtil;
 import us.kenny.core.MultiKeyBinding;
 
 import java.io.IOException;
@@ -135,7 +135,7 @@ public class ConfigManager {
             JsonObject keyBindingJson = new JsonObject();
             keyBindingJson.addProperty("id", multiKeyBinding.getId().toString());
             keyBindingJson.addProperty("action", multiKeyBinding.getAction());
-            keyBindingJson.addProperty("key", multiKeyBinding.getKey().getTranslationKey());
+            keyBindingJson.addProperty("key", multiKeyBinding.getKey().getName());
 
             keyBindingsArray.add(keyBindingJson);
         }
@@ -148,7 +148,7 @@ public class ConfigManager {
      * @param keyCode The key code to convert.
      */
     private static String convertKeyCodeToKeyName(int keyCode) {
-        InputUtil.Type keyType = keyCode <= 10 ? InputUtil.Type.MOUSE : InputUtil.Type.KEYSYM;
-        return keyType.createFromCode(keyCode).getTranslationKey();
+        InputConstants.Type keyType = keyCode <= 10 ? InputConstants.Type.MOUSE : InputConstants.Type.KEYSYM;
+        return keyType.getOrCreate(keyCode).getName();
     }
 }

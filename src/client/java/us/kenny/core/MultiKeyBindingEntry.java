@@ -162,7 +162,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
                             Component.literal("[ ").append(this.editButton.getMessage().copy().withStyle(ChatFormatting.WHITE))
                                     .append(" ]").withStyle(ChatFormatting.RED));
             this.editButton.setTooltip(
-                    Tooltip.create(Component.translatable("controls.keybinds.duplicateKeybinds", new Object[] { duplicates })));
+                    Tooltip.create(Component.translatable("controls.keybinds.duplicateKeybinds", duplicates)));
         } else {
             this.editButton.setTooltip(null);
         }
@@ -172,9 +172,8 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
                     .setMessage(
                             Component.literal("> ")
                                     .append(this.editButton.getMessage().copy()
-                                            .withStyle(new ChatFormatting[] {
-                                                    ChatFormatting.WHITE,
-                                                    ChatFormatting.UNDERLINE }))
+                                            .withStyle(ChatFormatting.WHITE,
+                                                    ChatFormatting.UNDERLINE))
                                     .append(" <")
                                     .withStyle(ChatFormatting.YELLOW));
         }

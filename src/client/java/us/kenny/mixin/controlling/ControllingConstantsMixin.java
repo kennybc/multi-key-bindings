@@ -33,8 +33,6 @@ public class ControllingConstantsMixin {
      *
      * @param key The search term key: category, key, or name.
      * @param multiKeyBinding The custom key binding we are testing.
-     *
-     * @see us.kenny.core.MultiKeyBindingEntry#render
      */
     @Unique
     private static Optional<String> testMultiKeyBinding(String key, MultiKeyBinding multiKeyBinding) {

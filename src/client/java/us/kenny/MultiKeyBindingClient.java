@@ -1,6 +1,8 @@
 package us.kenny;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.loader.api.FabricLoader;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,6 +11,10 @@ public class MultiKeyBindingClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        LOGGER.info("Starting multi-key-bindings!");
+         if (FabricLoader.getInstance().isModLoaded("controlling")) {
+            LOGGER.info("Starting multi-key-bindings with controlling plugin!");
+        } else {
+            LOGGER.info("Starting multi-key-bindings!");
+        }
     }
 }

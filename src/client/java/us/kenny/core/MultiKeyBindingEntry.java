@@ -79,7 +79,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
      * Renders our custom entry in the list of key bindings.
      */
     @Override
-    public void renderContent(GuiGraphics context, int mouseX, int mouseY, boolean hovered, float deltaTicks) {
+    public void renderContent(GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks) {
         // Render buttons
         int scrollbarX = this.parentList.getRowRight() + 6 + 2;
         int contentX = this.getContentX();
@@ -88,32 +88,32 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
 
         int resetButtonX = scrollbarX - this.resetButton.getWidth() - 10;
         this.resetButton.setPosition(resetButtonX, buttonY);
-        this.resetButton.render(context, mouseX, mouseY, deltaTicks);
+        this.resetButton.render(graphics, mouseX, mouseY, deltaTicks);
 
         int editButtonX = resetButtonX - this.editButton.getWidth() - 5;
         this.editButton.setPosition(editButtonX, buttonY);
-        this.editButton.render(context, mouseX, mouseY, deltaTicks);
+        this.editButton.render(graphics, mouseX, mouseY, deltaTicks);
 
         int removeKeyBindingButtonX = editButtonX - this.removeKeyBindingButton.getWidth() - 5;
         this.removeKeyBindingButton.setPosition(removeKeyBindingButtonX, buttonY);
-        this.removeKeyBindingButton.render(context, mouseX, mouseY, deltaTicks);
+        this.removeKeyBindingButton.render(graphics, mouseX, mouseY, deltaTicks);
 
         // Render an arrow instead of action name
         int leftOffset = 10;
         int topOffset = 5;
         int arrowLength = 20;
 
-        context.fill(contentX + leftOffset, contentY + topOffset, contentX + leftOffset + arrowLength,
+        graphics.fill(contentX + leftOffset, contentY + topOffset, contentX + leftOffset + arrowLength,
                 contentY + topOffset + 1,
                 CommonColors.LIGHTER_GRAY);
-        context.fill(contentX + leftOffset, contentY, contentX + leftOffset + 1, contentY + topOffset,
+        graphics.fill(contentX + leftOffset, contentY, contentX + leftOffset + 1, contentY + topOffset,
                 CommonColors.LIGHTER_GRAY);
 
         int tipX = contentX + leftOffset + arrowLength;
         for (int i = 0; i <= 2; i++) {
-            context.fill(tipX - i, contentY + topOffset - i, tipX - i + 1, contentY + topOffset - i + 1,
+            graphics.fill(tipX - i, contentY + topOffset - i, tipX - i + 1, contentY + topOffset - i + 1,
                     CommonColors.LIGHTER_GRAY);
-            context.fill(tipX - i, contentY + topOffset + i, tipX - i + 1, contentY + topOffset + i + 1,
+            graphics.fill(tipX - i, contentY + topOffset + i, tipX - i + 1, contentY + topOffset + i + 1,
                     CommonColors.LIGHTER_GRAY);
         }
     }

@@ -2,6 +2,7 @@ package us.kenny.mixin;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.gui.components.AbstractSelectionList;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -82,7 +83,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
      * Renders our custom "+" button in native key binding entries.
      */
     @Inject(method = "renderContent", at = @At("TAIL"))
-    private void onRenderContent(GuiGraphics context, int mouseX, int mouseY, boolean hovered, float deltaTicks,
+    private void onRenderContent(GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks,
             CallbackInfo ci) {
         // Mimic the positioning and layout of the existing buttons
         int scrollbarX = this.keyBindsList.getRowRight() + 6 + 2;
@@ -91,7 +92,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
         ; // Align with the existing buttons
 
         this.addKeyBindingButton.setPosition(buttonX, buttonY);
-        this.addKeyBindingButton.render(context, mouseX, mouseY, deltaTicks);
+        this.addKeyBindingButton.render(graphics, mouseX, mouseY, deltaTicks);
     }
 
     /**

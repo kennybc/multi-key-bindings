@@ -60,7 +60,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
                 key.getName(),
                 key.getCategory(),
                 InputConstants.UNKNOWN);
-        MultiKeyBindingEntry multiKeyBindingEntry = new ControllingMultiKeyBindingEntry((CustomList) newKeyBindsList, (KeyEntry) (Object) this,
+        MultiKeyBindingEntry multiKeyBindingEntry = new ControllingMultiKeyBindingEntry(newKeyBindsList, (KeyEntry) (Object) this,
                 multiKeyBinding);
 
         List<KeyBindsList.Entry> entries = new ArrayList<>(newKeyBindsList.children());
@@ -79,7 +79,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     }
 
     /**
-     * @see us.kenny.mixin.KeyBindingEntryMixin#onInit
+     * @see us.kenny.mixin.KeyBindsListEntryMixin#onInit
      */
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(NewKeyBindsList newKeyBindsList, KeyMapping keyBinding, Component bindingName, CallbackInfo ci) {
@@ -117,7 +117,6 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
             float delta,
             Operation<Void> original) {
         button.active = !this.hidden && !this.key.isDefault();
-        ;
 
         original.call(button, graphics, mouseX, mouseY, delta);
     }

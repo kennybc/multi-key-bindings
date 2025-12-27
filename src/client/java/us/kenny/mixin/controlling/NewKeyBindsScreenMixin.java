@@ -39,17 +39,7 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
     }
 
     /**
-     * Controlling sorting does not support our custom key bindings, so we need to:
-     * (1)
-     * During the filter, include any native key bindings whose associated custom
-     * key bindings (bindings to the same action) pass the filter.
-     * (2)
-     * Sort the native entries, but keep track of the relationships to custom key
-     * bindings.
-     * (3)
-     * Once sorting is complete, add the custom key bindings back in place.
-     *
-     * @return
+     * Our custom key bindings cannot be sorted, so we must first remove them before sorting. After sorting, we add them back in place.
      */
     @WrapOperation(method = "filterKeys(Ljava/lang/String;)V", at = @At(value = "INVOKE", target = "Ljava/util/function/Consumer;accept(Ljava/lang/Object;)V"))
     private void onFilterKeysSort(Consumer<List<NewKeyBindsList.KeyEntry>> instance, Object object, Operation<Void> original) {
@@ -73,8 +63,7 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
         list.sort(this.sortOrder);
         List<NewKeyBindsList.Entry> sortedEntries = new ArrayList<>(list.children());
 
-        // Clear and rebuild children (display list) with MultiKeyBindingEntry in correct place
-        // DO NOT clear allEntries - it's the persistent unfiltered list
+        // Clear and rebuild children with custom bindings in correct place
         list.clearEntries();
         for (NewKeyBindsList.Entry entry : sortedEntries) {
             if (entry instanceof NewKeyBindsList.KeyEntry keyEntry) {
@@ -85,6 +74,9 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
         }
     }
 
+    /**
+     * If a child custom binding passes the filter predicate but its parent does not, retroactively add back the parent, but set it to be read-only.
+     */
     @WrapOperation(method = "filterKeys(Ljava/lang/String;)V", at = @At(value = "INVOKE", target = "Lcom/blamejared/searchables/api/SearchableType;filterEntries(Ljava/util/List;Ljava/lang/String;Ljava/util/function/Predicate;)Ljava/util/List;"))
     private List<KeyBindsList.Entry> onFilterKeysFilter(SearchableType<KeyBindsList.Entry> instance, List<KeyBindsList.Entry> entries, String search, Predicate<KeyBindsList.Entry> predicate, Operation<List<KeyBindsList.Entry>> original) {
         List<KeyBindsList.Entry> filtered = original.call(instance, entries, search, predicate);

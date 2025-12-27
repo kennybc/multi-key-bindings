@@ -89,7 +89,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
         int scrollbarX = this.keyBindsList.getRowRight() + 6 + 2;
         int buttonX = scrollbarX - 165; // 5 wide gap between buttons, 20 wide "+" button
         int buttonY = this.getContentY() - 2;
-        ; // Align with the existing buttons
+        // Align with the existing buttons
 
         this.addKeyBindingButton.setPosition(buttonX, buttonY);
         this.addKeyBindingButton.render(graphics, mouseX, mouseY, deltaTicks);

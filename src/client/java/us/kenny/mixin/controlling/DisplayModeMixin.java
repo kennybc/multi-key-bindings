@@ -51,8 +51,6 @@ public abstract class DisplayModeMixin {
      * Tests a custom key binding against the current display mode predicate.
      * 
      * @param multiKeyBinding The custom key binding we are testing.
-     * 
-     * @see us.kenny.core.MultiKeyBindingEntry#render
      */
     @Unique
     private boolean testMultiKeyBinding(MultiKeyBinding multiKeyBinding) {
@@ -101,7 +99,7 @@ public abstract class DisplayModeMixin {
         return entry -> {
             // Apply filter to custom MultiKeyBinding
             if (entry instanceof MultiKeyBindingEntry multiKeyBindingEntry) {
-                MultiKeyBinding multiKeyBinding = ((MultiKeyBindingEntry) multiKeyBindingEntry).getMultiKeyBinding();
+                MultiKeyBinding multiKeyBinding = multiKeyBindingEntry.getMultiKeyBinding();
                 return testMultiKeyBinding(multiKeyBinding);
             }
 

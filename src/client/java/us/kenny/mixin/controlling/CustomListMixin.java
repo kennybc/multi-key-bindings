@@ -25,11 +25,6 @@ import java.util.Collection;
 @Mixin(value = CustomList.class, remap = false)
 public abstract class CustomListMixin {
 
-    @Inject(method = "<init>", at = @At("HEAD"))
-    private static void onInit(KeyBindsScreen controls, Minecraft mcIn, CallbackInfo ci) {
-        MultiKeyBindingClient.LOGGER.info("KENNY TEST INITIALIZING CUSTOMLIST");
-    }
-
     /**
      * Injected in the getAllEntries method:
      * This is called when filters are changed, so we need to restore all button

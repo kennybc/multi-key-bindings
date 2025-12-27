@@ -4,15 +4,12 @@
   "compatibilityLevel": "JAVA_21",
   "plugin": "us.kenny.mixin.controlling.ControllingMixinPlugin",
   "client": [
-    "AbstractSelectionListAccessor",
     "ControllingConstantsMixin",
     "CustomListAccessor",
     "CustomListMixin",
     "DisplayModeMixin",
     "KeyEntryMixin",
-    "NewKeyBindsListMixin",
-    "NewKeyBindsScreenMixin",
-    "SortOrderMixin"
+    "NewKeyBindsScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

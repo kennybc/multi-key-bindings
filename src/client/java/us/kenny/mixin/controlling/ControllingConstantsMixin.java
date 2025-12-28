@@ -1,24 +1,17 @@
 package us.kenny.mixin.controlling;
 
 import com.blamejared.controlling.ControllingConstants;
-import com.blamejared.controlling.api.DisplayMode;
-import com.blamejared.controlling.client.NewKeyBindsList;
 import com.blamejared.searchables.api.SearchableComponent;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.mojang.blaze3d.platform.InputConstants;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
-import us.kenny.core.controlling.ControllingHideableKeyEntry;
 
-import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Function;
 

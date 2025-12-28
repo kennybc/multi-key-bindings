@@ -87,6 +87,7 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
                 parentsToReinsert.add(child.getParentEntry());
             }
         }
+        Set<KeyBindsList.Entry> parentsInFiltered = new HashSet<>(filtered);
 
         List<KeyBindsList.Entry> rebuilt = new ArrayList<>();
         Set<KeyBindsList.Entry> insertedParents = new HashSet<>();
@@ -95,7 +96,8 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
             if (entry instanceof ControllingMultiKeyBindingEntry child) {
                 KeyBindsList.Entry parent = child.getParentEntry();
 
-                if (parent instanceof ControllingHideableKeyEntry hideableKeyEntry) {
+                // Only set hidden if the parent didn't match the filter itself
+                if (parent instanceof ControllingHideableKeyEntry hideableKeyEntry && !parentsInFiltered.contains(parent)) {
                     hideableKeyEntry.setHidden(true);
                 }
 

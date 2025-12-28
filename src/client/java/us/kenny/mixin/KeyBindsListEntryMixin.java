@@ -2,7 +2,6 @@ package us.kenny.mixin;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.platform.InputConstants;
-import net.minecraft.client.gui.components.AbstractSelectionList;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

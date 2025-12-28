@@ -2,18 +2,13 @@ package us.kenny.mixin.controlling;
 
 import com.blamejared.controlling.client.CustomList;
 import com.blamejared.controlling.client.NewKeyBindsList;
-import com.blamejared.controlling.client.NewKeyBindsList.KeyEntry;
 
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
-import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import us.kenny.MultiKeyBindingClient;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;

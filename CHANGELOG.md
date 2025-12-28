@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0 (Dec 27, 2025)
+
+- Migrate from yarn to mojang mappings
+- Reintegrate with "Controlling" mod after version mismatch
+
 ## 1.1.0 (Aug 28, 2025)
 
 - Add support for the mod "Controlling"

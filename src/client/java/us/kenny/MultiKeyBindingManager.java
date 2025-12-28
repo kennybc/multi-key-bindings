@@ -1,30 +1,40 @@
 package us.kenny;
 
-import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.option.KeyBinding.Category;
-import net.minecraft.client.util.InputUtil;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.StickyMultiKeyBinding;
-
+import com.mojang.blaze3d.platform.InputConstants;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.client.KeyMapping.Category;
+import net.minecraft.client.Options;
+import java.util.function.BooleanSupplier;
 
 public class MultiKeyBindingManager {
-    private static GameOptions gameOptions;
+    private static Options gameOptions;
 
     private static final Map<String, List<MultiKeyBinding>> ACTION_TO_BINDINGS = new HashMap<>();
-    private static final Map<InputUtil.Key, List<MultiKeyBinding>> KEY_TO_BINDINGS = new HashMap<>();
+    private static final Map<InputConstants.Key, List<MultiKeyBinding>> KEY_TO_BINDINGS = new HashMap<>();
     private static final Map<UUID, MultiKeyBinding> ID_TO_BINDING = new HashMap<>();
+    
+    private record StickySpec(BooleanSupplier toggleSupplier, boolean shouldRestore) {}
+    private static Map<String, StickySpec> stickySpecs() {
+        return Map.of(
+            "multi.key.sneak",  new StickySpec(gameOptions.toggleCrouch()::get, true),
+            "multi.key.sprint", new StickySpec(gameOptions.toggleSprint()::get, true),
+            "multi.key.use",    new StickySpec(gameOptions.toggleUse()::get, false),
+            "multi.key.attack", new StickySpec(gameOptions.toggleAttack()::get, true)
+        );
+    }
 
-    public static GameOptions getGameOptions() {
+    public static Options getGameOptions() {
         return MultiKeyBindingManager.gameOptions;
     }
 
-    public static void setGameOptions(GameOptions gameOptions) {
+    public static void setGameOptions(Options gameOptions) {
         MultiKeyBindingManager.gameOptions = gameOptions;
     }
 
@@ -34,9 +44,9 @@ public class MultiKeyBindingManager {
      *
      * @see MultiKeyBindingManager#addKeyBinding(String, Category, String, UUID)
      */
-    public static MultiKeyBinding addKeyBinding(String action, Category category, InputUtil.Key key) {
+    public static MultiKeyBinding addKeyBinding(String action, Category category, InputConstants.Key key) {
         UUID newId = UUID.randomUUID();
-        MultiKeyBinding multiKeyBinding = addKeyBinding("multi." + action, category, key.getTranslationKey(), newId);
+        MultiKeyBinding multiKeyBinding = addKeyBinding("multi." + action, category, key.getName(), newId);
 
         ConfigManager.saveConfigFile();
 
@@ -53,15 +63,19 @@ public class MultiKeyBindingManager {
      * @param newId          The ID to set the binding to.
      */
     public static MultiKeyBinding addKeyBinding(String action, Category category, String translationKey, UUID newId) {
-        InputUtil.Key key = InputUtil.fromTranslationKey(translationKey);
+        InputConstants.Key key = InputConstants.getKey(translationKey);
         MultiKeyBinding multiKeyBinding;
 
-        if (action.equals("multi.key.sneak")) {
-            multiKeyBinding = new StickyMultiKeyBinding(newId, action, category, key,
-                    gameOptions.getSneakToggled()::getValue);
-        } else if (action.equals("multi.key.sprint")) {
-            multiKeyBinding = new StickyMultiKeyBinding(newId, action, category, key,
-                    gameOptions.getSneakToggled()::getValue);
+        StickySpec spec = stickySpecs().get(action);
+        if (spec != null) {
+            multiKeyBinding = new StickyMultiKeyBinding(
+                newId,
+                action,
+                category,
+                key,
+                spec.toggleSupplier(),
+                spec.shouldRestore()
+            );
         } else {
             multiKeyBinding = new MultiKeyBinding(newId, action, category, key);
         }
@@ -87,7 +101,7 @@ public class MultiKeyBindingManager {
      *
      * @param key The key.
      */
-    public static Collection<MultiKeyBinding> getKeyBindings(InputUtil.Key key) {
+    public static Collection<MultiKeyBinding> getKeyBindings(InputConstants.Key key) {
         return KEY_TO_BINDINGS.getOrDefault(key, new ArrayList<MultiKeyBinding>());
     }
 
@@ -101,11 +115,11 @@ public class MultiKeyBindingManager {
      * @param multiKeyBindingId The UUID of the key binding to update.
      * @param newKey            The new key to associate the binding with.
      */
-    public static void setKeyBinding(MultiKeyBinding multiKeyBinding, InputUtil.Key newKey) {
+    public static void setKeyBinding(MultiKeyBinding multiKeyBinding, InputConstants.Key newKey) {
         if (multiKeyBinding == null)
             return;
 
-        InputUtil.Key oldKey = multiKeyBinding.getKey();
+        InputConstants.Key oldKey = multiKeyBinding.getKey();
         if (oldKey == newKey)
             return;
 

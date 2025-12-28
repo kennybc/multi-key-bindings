@@ -1,9 +1,8 @@
 package us.kenny.core;
 
-import net.minecraft.client.option.KeyBinding.Category;
-import net.minecraft.client.util.InputUtil;
-
+import com.mojang.blaze3d.platform.InputConstants;
 import java.util.UUID;
+import net.minecraft.client.KeyMapping.Category;
 
 /**
  * Need to create this class to mimic a KeyBinding because the native KeyBinding
@@ -14,22 +13,26 @@ public class MultiKeyBinding {
     private final UUID id;
     private final String action;
     private Category category;
-    private InputUtil.Key key;
+    private InputConstants.Key key;
 
     private boolean pressed;
     private int timesPressed;
 
-    public MultiKeyBinding(UUID id, String action, Category category, InputUtil.Key key) {
+    public MultiKeyBinding(UUID id, String action, Category category, InputConstants.Key key) {
         this.id = id;
         this.action = action;
         this.category = category;
         this.key = key;
     }
 
-    public void reset() {
+    public void release() {
         this.timesPressed = 0;
         this.setPressed(false);
     }
+
+    public boolean shouldSetOnIngameFocus() {
+      return this.key.getType() == InputConstants.Type.KEYSYM && this.key.getValue() != InputConstants.UNKNOWN.getValue();
+   }
 
     public UUID getId() {
         return this.id;
@@ -47,11 +50,11 @@ public class MultiKeyBinding {
         this.category = category;
     }
 
-    public InputUtil.Key getKey() {
+    public InputConstants.Key getKey() {
         return this.key;
     }
 
-    public void setKey(InputUtil.Key key) {
+    public void setKey(InputConstants.Key key) {
         this.key = key;
     }
 

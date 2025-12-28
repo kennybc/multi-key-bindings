@@ -3,13 +3,13 @@
   "package": "us.kenny.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "ControlsListWidgetAccessor",
-    "ControlsListWidgetMixin",
-    "GameOptionsMixin",
-    "KeyBindingEntryAccessor",
-    "KeyBindingEntryMixin",
-    "KeyBindingMixin",
-    "KeybindsScreenMixin"
+    "KeyBindsListAccessor",
+    "KeyBindsListEntryAccessor",
+    "KeyBindsListEntryMixin",
+    "KeyBindsListMixin",
+    "KeyBindsScreenMixin",
+    "KeyMappingMixin",
+    "OptionsMixin"
   ],
   "injectors": {
     "defaultRequire": 1

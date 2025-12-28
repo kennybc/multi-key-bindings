@@ -1,2 +1,2 @@
 accessWidener v2 named
-accessible method net/minecraft/client/gui/screen/option/ControlsListWidget$Entry update ()V
+accessible method net/minecraft/client/gui/screens/options/controls/KeyBindsList$Entry refreshEntry ()V

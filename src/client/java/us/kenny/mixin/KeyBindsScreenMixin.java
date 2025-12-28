@@ -1,11 +1,11 @@
 package us.kenny.mixin;
 
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.screen.option.ControlsListWidget;
-import net.minecraft.client.gui.screen.option.KeybindsScreen;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.util.Util;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.Util;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -16,12 +16,12 @@ import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingScreen;
 
-@Mixin(KeybindsScreen.class)
-public abstract class KeybindsScreenMixin implements MultiKeyBindingScreen {
+@Mixin(KeyBindsScreen.class)
+public abstract class KeyBindsScreenMixin implements MultiKeyBindingScreen {
     @Shadow
-    public long lastKeyCodeUpdateTime;
+    public long lastKeySelection;
     @Shadow
-    private ControlsListWidget controlsList;
+    private KeyBindsList keyBindsList;
 
     @Unique
     private MultiKeyBinding selectedMultiKeyBinding;
@@ -41,12 +41,12 @@ public abstract class KeybindsScreenMixin implements MultiKeyBindingScreen {
      * Updates selected custom key binding with whatever mouse button was pressed.
      */
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-    private void onMouseClicked(Click click, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
+    private void onMouseClicked(MouseButtonEvent mouseButtonEvent, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
         if (this.selectedMultiKeyBinding != null) {
             MultiKeyBindingManager.setKeyBinding(this.selectedMultiKeyBinding,
-                    InputUtil.Type.MOUSE.createFromCode(click.button()));
+                    InputConstants.Type.MOUSE.getOrCreate(mouseButtonEvent.button()));
             this.selectedMultiKeyBinding = null;
-            this.controlsList.update();
+            this.keyBindsList.resetMappingAndUpdateButtons();
             cir.setReturnValue(true);
             cir.cancel();
         }
@@ -57,19 +57,19 @@ public abstract class KeybindsScreenMixin implements MultiKeyBindingScreen {
      * Updates selected custom key binding with whatever key was pressed.
      */
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
-    public void onKeyPressed(KeyInput input, CallbackInfoReturnable<Boolean> cir) {
+    public void onKeyPressed(KeyEvent keyEvent, CallbackInfoReturnable<Boolean> cir) {
         if (this.selectedMultiKeyBinding != null) {
-            if (input.isEscape()) {
+            if (keyEvent.isEscape()) {
                 MultiKeyBindingManager.setKeyBinding(this.selectedMultiKeyBinding,
-                        InputUtil.UNKNOWN_KEY);
+                        InputConstants.UNKNOWN);
             } else {
                 MultiKeyBindingManager.setKeyBinding(this.selectedMultiKeyBinding,
-                        InputUtil.fromKeyCode(input));
+                        InputConstants.getKey(keyEvent));
             }
 
             this.selectedMultiKeyBinding = null;
-            this.lastKeyCodeUpdateTime = Util.getMeasuringTimeMs();
-            this.controlsList.update();
+            this.lastKeySelection = Util.getMillis();
+            this.keyBindsList.resetMappingAndUpdateButtons();
             cir.setReturnValue(true);
             cir.cancel();
         }

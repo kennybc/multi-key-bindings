@@ -1,5 +1,5 @@
 # Multi Key Bindings
-[**Github**](https://github.com/kennybc/multi-key-bindings) • [**Modrinth**](https://modrinth.com/mod/multi-key-bindings)
+[**Github**](https://github.com/kennybc/multi-key-bindings) • [**Modrinth**](https://modrinth.com/mod/multi-key-bindings) • [**CurseForge**](https://www.curseforge.com/minecraft/mc-mods/multi-key-bindings)
 
 **Allows players to create multiple keybindings for the same action/function.**
 

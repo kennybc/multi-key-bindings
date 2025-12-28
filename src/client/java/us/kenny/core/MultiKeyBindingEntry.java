@@ -1,73 +1,73 @@
 package us.kenny.core;
 
 import com.google.common.collect.ImmutableList;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.Selectable;
-import net.minecraft.client.gui.screen.option.ControlsListWidget;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Formatting;
+import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Unique;
 import us.kenny.MultiKeyBindingManager;
-import us.kenny.mixin.ControlsListWidgetAccessor;
+import us.kenny.mixin.KeyBindsListAccessor;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.narration.NarratableEntry;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.util.CommonColors;
 
-public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
-    protected final ControlsListWidget parentList;
+public class MultiKeyBindingEntry extends KeyBindsList.Entry {
+    protected final KeyBindsList parentList;
     protected MultiKeyBindingScreen parentScreen;
     private final MultiKeyBinding multiKeyBinding;
     private boolean duplicate;
 
-    private final ButtonWidget editButton;
-    private final ButtonWidget resetButton;
-    protected ButtonWidget removeKeyBindingButton;
+    private final Button editButton;
+    private final Button resetButton;
+    protected Button removeKeyBindingButton;
 
-    public MultiKeyBindingEntry(final ControlsListWidget parentList, final MultiKeyBinding multiKeyBinding) {
+    public MultiKeyBindingEntry(final KeyBindsList parentList, final MultiKeyBinding multiKeyBinding) {
         this.parentList = parentList;
-        this.parentScreen = ((MultiKeyBindingScreen) ((ControlsListWidgetAccessor) parentList)
-                .getParent());
+        this.parentScreen = ((MultiKeyBindingScreen) ((KeyBindsListAccessor) parentList)
+                .getKeyBindsScreen());
         this.multiKeyBinding = multiKeyBinding;
 
-        this.editButton = ButtonWidget
-                .builder(Text.of(multiKeyBinding.getAction()), button -> {
+        this.editButton = Button
+                .builder(Component.nullToEmpty(multiKeyBinding.getAction()), button -> {
                     this.parentScreen.setSelectedMultiKeyBinding(multiKeyBinding);
-                    this.parentList.update();
+                    this.parentList.resetMappingAndUpdateButtons();
                 })
                 .size(75, 20)
                 .build();
 
-        this.resetButton = ButtonWidget
-                .builder(Text.translatable("controls.reset"), button -> {
-                    multiKeyBinding.setKey(InputUtil.UNKNOWN_KEY);
-                    this.parentList.update();
+        this.resetButton = Button
+                .builder(Component.translatable("controls.reset"), button -> {
+                    multiKeyBinding.setKey(InputConstants.UNKNOWN);
+                    this.parentList.resetMappingAndUpdateButtons();
                 })
                 .size(50, 20)
                 .build();
 
-        this.removeKeyBindingButton = ButtonWidget
-                .builder(Text.literal("\uD83D\uDDD1").formatted(Formatting.RED),
+        this.removeKeyBindingButton = Button
+                .builder(Component.literal("\uD83D\uDDD1").withStyle(ChatFormatting.RED),
                         (button) -> {
                             MultiKeyBindingManager.removeKeyBinding(multiKeyBinding);
                             this.parentScreen.setSelectedMultiKeyBinding(null);
 
-                            List<ControlsListWidget.Entry> entries = new ArrayList<>(this.parentList.children());
+                            List<KeyBindsList.Entry> entries = new ArrayList<>(this.parentList.children());
                             entries.remove(this);
                             this.parentList.replaceEntries(entries);
 
-                            this.parentList.update();
+                            this.parentList.resetMappingAndUpdateButtons();
                         })
                 .size(20, 20)
                 .build();
 
-        this.update();
+        this.refreshEntry();
     }
 
     @Unique
@@ -79,7 +79,7 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
      * Renders our custom entry in the list of key bindings.
      */
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, boolean hovered, float deltaTicks) {
+    public void renderContent(GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks) {
         // Render buttons
         int scrollbarX = this.parentList.getRowRight() + 6 + 2;
         int contentX = this.getContentX();
@@ -88,33 +88,33 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
 
         int resetButtonX = scrollbarX - this.resetButton.getWidth() - 10;
         this.resetButton.setPosition(resetButtonX, buttonY);
-        this.resetButton.render(context, mouseX, mouseY, deltaTicks);
+        this.resetButton.render(graphics, mouseX, mouseY, deltaTicks);
 
         int editButtonX = resetButtonX - this.editButton.getWidth() - 5;
         this.editButton.setPosition(editButtonX, buttonY);
-        this.editButton.render(context, mouseX, mouseY, deltaTicks);
+        this.editButton.render(graphics, mouseX, mouseY, deltaTicks);
 
         int removeKeyBindingButtonX = editButtonX - this.removeKeyBindingButton.getWidth() - 5;
         this.removeKeyBindingButton.setPosition(removeKeyBindingButtonX, buttonY);
-        this.removeKeyBindingButton.render(context, mouseX, mouseY, deltaTicks);
+        this.removeKeyBindingButton.render(graphics, mouseX, mouseY, deltaTicks);
 
         // Render an arrow instead of action name
         int leftOffset = 10;
         int topOffset = 5;
         int arrowLength = 20;
 
-        context.fill(contentX + leftOffset, contentY + topOffset, contentX + leftOffset + arrowLength,
+        graphics.fill(contentX + leftOffset, contentY + topOffset, contentX + leftOffset + arrowLength,
                 contentY + topOffset + 1,
-                Colors.ALTERNATE_WHITE);
-        context.fill(contentX + leftOffset, contentY, contentX + leftOffset + 1, contentY + topOffset,
-                Colors.ALTERNATE_WHITE);
+                CommonColors.LIGHTER_GRAY);
+        graphics.fill(contentX + leftOffset, contentY, contentX + leftOffset + 1, contentY + topOffset,
+                CommonColors.LIGHTER_GRAY);
 
         int tipX = contentX + leftOffset + arrowLength;
         for (int i = 0; i <= 2; i++) {
-            context.fill(tipX - i, contentY + topOffset - i, tipX - i + 1, contentY + topOffset - i + 1,
-                    Colors.ALTERNATE_WHITE);
-            context.fill(tipX - i, contentY + topOffset + i, tipX - i + 1, contentY + topOffset + i + 1,
-                    Colors.ALTERNATE_WHITE);
+            graphics.fill(tipX - i, contentY + topOffset - i, tipX - i + 1, contentY + topOffset - i + 1,
+                    CommonColors.LIGHTER_GRAY);
+            graphics.fill(tipX - i, contentY + topOffset + i, tipX - i + 1, contentY + topOffset + i + 1,
+                    CommonColors.LIGHTER_GRAY);
         }
     }
 
@@ -123,35 +123,35 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
      * duplication key bindings.
      */
     @Override
-    public void update() {
-        this.editButton.setMessage(this.multiKeyBinding.getKey().getLocalizedText());
-        this.resetButton.active = !this.multiKeyBinding.getKey().equals(InputUtil.UNKNOWN_KEY);
+    public void refreshEntry() {
+        this.editButton.setMessage(this.multiKeyBinding.getKey().getDisplayName());
+        this.resetButton.active = !this.multiKeyBinding.getKey().equals(InputConstants.UNKNOWN);
         this.duplicate = false;
 
-        MutableText duplicates = Text.empty();
-        if (!this.multiKeyBinding.getKey().equals(InputUtil.UNKNOWN_KEY)) {
-            for (KeyBinding kb : MultiKeyBindingManager.getGameOptions().allKeys) {
-                if (!kb.isUnbound() && kb.getBoundKeyTranslationKey()
-                        .equals(this.multiKeyBinding.getKey().getTranslationKey())) {
+        MutableComponent duplicates = Component.empty();
+        if (!this.multiKeyBinding.getKey().equals(InputConstants.UNKNOWN)) {
+            for (KeyMapping kb : MultiKeyBindingManager.getGameOptions().keyMappings) {
+                if (!kb.isUnbound() && kb.saveString()
+                        .equals(this.multiKeyBinding.getKey().getName())) {
                     if (this.duplicate) {
                         duplicates.append(", ");
                     }
 
                     this.duplicate = true;
-                    duplicates.append(Text.translatable(kb.getId()));
+                    duplicates.append(Component.translatable(kb.getName()));
                 }
             }
 
             for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
-                if (!mkb.getId().equals(this.multiKeyBinding.getId()) && !mkb.getKey().equals(InputUtil.UNKNOWN_KEY) &&
-                        mkb.getKey().getTranslationKey()
-                                .equals(this.multiKeyBinding.getKey().getTranslationKey())) {
+                if (!mkb.getId().equals(this.multiKeyBinding.getId()) && !mkb.getKey().equals(InputConstants.UNKNOWN) &&
+                        mkb.getKey().getName()
+                                .equals(this.multiKeyBinding.getKey().getName())) {
                     if (this.duplicate) {
                         duplicates.append(", ");
                     }
 
                     this.duplicate = true;
-                    duplicates.append(Text.translatable(mkb.getAction().replaceFirst("^multi.", "")));
+                    duplicates.append(Component.translatable(mkb.getAction().replaceFirst("^multi.", "")));
                 }
             }
         }
@@ -159,10 +159,10 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
         if (this.duplicate) {
             this.editButton
                     .setMessage(
-                            Text.literal("[ ").append(this.editButton.getMessage().copy().formatted(Formatting.WHITE))
-                                    .append(" ]").formatted(Formatting.RED));
+                            Component.literal("[ ").append(this.editButton.getMessage().copy().withStyle(ChatFormatting.WHITE))
+                                    .append(" ]").withStyle(ChatFormatting.RED));
             this.editButton.setTooltip(
-                    Tooltip.of(Text.translatable("controls.keybinds.duplicateKeybinds", new Object[] { duplicates })));
+                    Tooltip.create(Component.translatable("controls.keybinds.duplicateKeybinds", duplicates)));
         } else {
             this.editButton.setTooltip(null);
         }
@@ -170,13 +170,12 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
         if (this.parentScreen.getSelectedMultiKeyBinding() == this.multiKeyBinding) {
             this.editButton
                     .setMessage(
-                            Text.literal("> ")
+                            Component.literal("> ")
                                     .append(this.editButton.getMessage().copy()
-                                            .formatted(new Formatting[] {
-                                                    Formatting.WHITE,
-                                                    Formatting.UNDERLINE }))
+                                            .withStyle(ChatFormatting.WHITE,
+                                                    ChatFormatting.UNDERLINE))
                                     .append(" <")
-                                    .formatted(Formatting.YELLOW));
+                                    .withStyle(ChatFormatting.YELLOW));
         }
     }
 
@@ -185,12 +184,12 @@ public class MultiKeyBindingEntry extends ControlsListWidget.Entry {
      * interacted with.
      */
     @Override
-    public List<? extends Element> children() {
+    public List<? extends GuiEventListener> children() {
         return ImmutableList.of(this.editButton, this.resetButton, this.removeKeyBindingButton);
     }
 
     @Override
-    public List<? extends Selectable> selectableChildren() {
+    public List<? extends NarratableEntry> narratables() {
         return ImmutableList.of(this.editButton, this.resetButton, this.removeKeyBindingButton);
     }
 }

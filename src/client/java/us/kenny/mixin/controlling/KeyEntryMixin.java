@@ -2,7 +2,7 @@ package us.kenny.mixin.controlling;
 
 import com.blamejared.controlling.client.NewKeyBindsList;
 import com.blamejared.controlling.client.NewKeyBindsList.KeyEntry;
-import com.google.common.collect.ImmutableList;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -136,16 +136,32 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     /**
      * @see us.kenny.mixin.KeyBindsListEntryMixin#children
      */
-    @Override
-    public List<GuiEventListener> children() {
-        return ImmutableList.of(this.btnChangeKeyBinding, this.btnResetKeyBinding, this.addKeyBindingButton);
+    @ModifyReturnValue(method = "children", at = @At("RETURN"))
+    private List<? extends GuiEventListener> modifyChildren(
+            List<? extends GuiEventListener> original
+    ) {
+        if (this.addKeyBindingButton == null || original.contains(this.addKeyBindingButton)) {
+            return original;
+        }
+
+        List<GuiEventListener> list = new ArrayList<>(original);
+        list.add(this.addKeyBindingButton);
+        return list;
     }
 
     /**
      * @see us.kenny.mixin.KeyBindsListEntryMixin#narratables
      */
-    @Override
-    public List<? extends NarratableEntry> narratables() {
-        return ImmutableList.of(this.btnChangeKeyBinding, this.btnResetKeyBinding, this.addKeyBindingButton);
+    @ModifyReturnValue(method = "narratables", at = @At("RETURN"))
+    private List<? extends NarratableEntry> modifyNarratables(
+            List<? extends NarratableEntry> original
+    ) {
+        if (this.addKeyBindingButton == null || original.contains(this.addKeyBindingButton)) {
+            return original;
+        }
+
+        List<NarratableEntry> list = new ArrayList<>(original);
+        list.add(this.addKeyBindingButton);
+        return list;
     }
 }

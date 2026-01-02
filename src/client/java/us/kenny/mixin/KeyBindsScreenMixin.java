@@ -1,11 +1,10 @@
 package us.kenny.mixin;
 
 import com.mojang.blaze3d.platform.InputConstants;
+
+import net.minecraft.Util;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.util.Util;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -42,10 +41,10 @@ public abstract class KeyBindsScreenMixin implements MultiKeyBindingScreen {
      * Updates selected custom key binding with whatever mouse button was pressed.
      */
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-    private void onMouseClicked(MouseButtonEvent mouseButtonEvent, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
+    private void onMouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
         if (this.selectedMultiKeyBinding != null) {
             MultiKeyBindingManager.setKeyBinding(this.selectedMultiKeyBinding,
-                    InputConstants.Type.MOUSE.getOrCreate(mouseButtonEvent.button()));
+                    InputConstants.Type.MOUSE.getOrCreate(button));
             this.selectedMultiKeyBinding = null;
             this.keyBindsList.resetMappingAndUpdateButtons();
             cir.setReturnValue(true);
@@ -58,14 +57,14 @@ public abstract class KeyBindsScreenMixin implements MultiKeyBindingScreen {
      * Updates selected custom key binding with whatever key was pressed.
      */
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
-    public void onKeyPressed(KeyEvent keyEvent, CallbackInfoReturnable<Boolean> cir) {
+    public void onKeyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
         if (this.selectedMultiKeyBinding != null) {
-            if (keyEvent.isEscape()) {
+            if (keyCode == InputConstants.KEY_ESCAPE) {
                 MultiKeyBindingManager.setKeyBinding(this.selectedMultiKeyBinding,
                         InputConstants.UNKNOWN);
             } else {
                 MultiKeyBindingManager.setKeyBinding(this.selectedMultiKeyBinding,
-                        InputConstants.getKey(keyEvent));
+                        InputConstants.getKey(keyCode, scanCode));
             }
 
             this.selectedMultiKeyBinding = null;

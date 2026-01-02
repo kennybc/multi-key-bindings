@@ -13,8 +13,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import java.util.Collection;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 
 @Mixin(KeyMapping.class)
 public abstract class KeyMappingMixin {
@@ -51,7 +49,7 @@ public abstract class KeyMappingMixin {
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             if (multiKeyBinding.getKey().getType() == InputConstants.Type.KEYSYM
                     && multiKeyBinding.getKey().getValue() != InputConstants.UNKNOWN.getValue()) {
-                multiKeyBinding.setPressed(InputConstants.isKeyDown(Minecraft.getInstance().getWindow(),
+                multiKeyBinding.setPressed(InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(),
                         multiKeyBinding.getKey().getValue()));
             }
         }
@@ -62,18 +60,6 @@ public abstract class KeyMappingMixin {
         Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings();
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             multiKeyBinding.release();
-        }
-    }
-
-    @Inject(method = "restoreToggleStatesOnScreenClosed", at = @At("TAIL"))
-    private static void onRestoreToggleStatesOnScreenClosed(CallbackInfo ci) {
-        Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings();
-        for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-            if (multiKeyBinding instanceof StickyMultiKeyBinding stickyMultiKeyBinding) {
-                if (stickyMultiKeyBinding.shouldRestoreStateOnScreenClosed()) {
-               stickyMultiKeyBinding.setPressed(true);
-            }
-            }
         }
     }
 
@@ -121,13 +107,13 @@ public abstract class KeyMappingMixin {
     }
 
     @Inject(method = "matches", at = @At("HEAD"), cancellable = true)
-    private void onMatchesKey(KeyEvent keyEvent, CallbackInfoReturnable<Boolean> cir) {
+    private void onMatchesKey(int keyCode, int scanCode, CallbackInfoReturnable<Boolean> cir) {
         Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getName());
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-            InputConstants.Key multiKey = multiKeyBinding.getKey();
-            boolean matches = keyEvent.key() == InputConstants.UNKNOWN.getValue()
-                    ? multiKey.getType() == InputConstants.Type.SCANCODE && multiKey.getValue() == keyEvent.scancode()
-                    : multiKey.getType() == InputConstants.Type.KEYSYM && multiKey.getValue() == keyEvent.key();
+            InputConstants.Key key = multiKeyBinding.getKey();
+            boolean matches = keyCode == InputConstants.UNKNOWN.getValue()
+                    ? key.getType() == InputConstants.Type.SCANCODE && key.getValue() == scanCode
+                    : key.getType() == InputConstants.Type.KEYSYM && key.getValue() == keyCode;
             if (matches) {
                 cir.setReturnValue(true);
                 cir.cancel();
@@ -137,11 +123,11 @@ public abstract class KeyMappingMixin {
     }
 
     @Inject(method = "matchesMouse", at = @At("HEAD"), cancellable = true)
-    private void onMatchesMouse(MouseButtonEvent mouseButtonEvent, CallbackInfoReturnable<Boolean> cir) {
+    private void onMatchesMouse(int code, CallbackInfoReturnable<Boolean> cir) {
         Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getName());
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-            InputConstants.Key multiKey = multiKeyBinding.getKey();
-            boolean matches = multiKey.getType() == InputConstants.Type.MOUSE && multiKey.getValue() == mouseButtonEvent.button();
+            InputConstants.Key key = multiKeyBinding.getKey();
+            boolean matches = key.getType() == InputConstants.Type.MOUSE && key.getValue() == code;
             if (matches) {
                 cir.setReturnValue(true);
                 cir.cancel();

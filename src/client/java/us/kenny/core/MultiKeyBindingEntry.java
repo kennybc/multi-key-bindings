@@ -6,7 +6,6 @@ import org.spongepowered.asm.mixin.Unique;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.mixin.KeyBindsListAccessor;
 
-import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
@@ -57,11 +56,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
                         (button) -> {
                             MultiKeyBindingManager.removeKeyBinding(multiKeyBinding);
                             this.parentScreen.setSelectedMultiKeyBinding(null);
-
-                            List<KeyBindsList.Entry> entries = new ArrayList<>(this.parentList.children());
-                            entries.remove(this);
-                            this.parentList.replaceEntries(entries);
-
+                            this.parentList.children().remove(this);
                             this.parentList.resetMappingAndUpdateButtons();
                         })
                 .size(20, 20)
@@ -79,11 +74,12 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
      * Renders our custom entry in the list of key bindings.
      */
     @Override
-    public void renderContent(GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks) {
+    public void render(GuiGraphics graphics,  int index, int y, int x, int entryWidth, int entryHeight, int mouseX,
+            int mouseY, boolean hovered, float deltaTicks) {
         // Render buttons
         int scrollbarX = this.parentList.getRowRight() + 6 + 2;
-        int contentX = this.getContentX();
-        int contentY = this.getContentY();
+        int contentX = x;
+        int contentY = y;
         int buttonY = contentY - 2;
 
         int resetButtonX = scrollbarX - this.resetButton.getWidth() - 10;
@@ -105,16 +101,16 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
 
         graphics.fill(contentX + leftOffset, contentY + topOffset, contentX + leftOffset + arrowLength,
                 contentY + topOffset + 1,
-                CommonColors.LIGHTER_GRAY);
+                CommonColors.GRAY);
         graphics.fill(contentX + leftOffset, contentY, contentX + leftOffset + 1, contentY + topOffset,
-                CommonColors.LIGHTER_GRAY);
+                CommonColors.GRAY);
 
         int tipX = contentX + leftOffset + arrowLength;
         for (int i = 0; i <= 2; i++) {
             graphics.fill(tipX - i, contentY + topOffset - i, tipX - i + 1, contentY + topOffset - i + 1,
-                    CommonColors.LIGHTER_GRAY);
+                    CommonColors.GRAY);
             graphics.fill(tipX - i, contentY + topOffset + i, tipX - i + 1, contentY + topOffset + i + 1,
-                    CommonColors.LIGHTER_GRAY);
+                    CommonColors.GRAY);
         }
     }
 

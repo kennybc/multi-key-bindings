@@ -49,10 +49,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
                 key.getCategory(),
                 InputConstants.UNKNOWN);
         MultiKeyBindingEntry multiKeyBindingEntry = new MultiKeyBindingEntry(keyBindsList, multiKeyBinding);
-
-        List<KeyBindsList.Entry> entries = new ArrayList<>(keyBindsList.children());
-        entries.add(keyBindsList.children().indexOf(this.self) + 1, multiKeyBindingEntry);
-        keyBindsList.replaceEntries(entries);
+        keyBindsList.children().add(keyBindsList.children().indexOf(this.self) + 1, multiKeyBindingEntry);
     }
 
     /**
@@ -76,22 +73,18 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
     /**
      * Renders our custom "+" button in native key binding entries.
      */
-    @Inject(method = "renderContent", at = @At("TAIL"))
-    private void onRenderContent(GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks,
-            CallbackInfo ci) {
+    @Inject(method = "render", at = @At("TAIL"))
+     private void onRender(GuiGraphics graphics, int index, int y, int x, int entryWidth, int entryHeight, int mouseX,
+            int mouseY, boolean hovered, float tickDelta, CallbackInfo ci) {
         // Mimic the positioning and layout of the existing buttons
-        int scrollbarX = this.keyBindsList.getRowRight() + 6 + 2;
+        int scrollbarX = keyBindsList.getRowRight() + 6 + 2;
         int buttonX = scrollbarX - 165; // 5 wide gap between buttons, 20 wide "+" button
-        int buttonY = this.getContentY() - 2; // Align with the existing buttons
-        
-        // Shift "+" button to the left if the "Ok Zoomer" settings button is also rendered
-        if (key.getName().equals("key.ok_zoomer.zoom") && this.children().size() > 3) {
-            buttonX -= 22;
-        }
+        int buttonY = y - 2; // Align with the existing buttons
 
-        this.addKeyBindingButton.setPosition(buttonX, buttonY);
-        this.addKeyBindingButton.render(graphics, mouseX, mouseY, deltaTicks);
+        addKeyBindingButton.setPosition(buttonX, buttonY);
+        addKeyBindingButton.render(graphics, mouseX, mouseY, tickDelta);
     }
+
 
     /**
      * The following override hardcoded lists that enable our custom buttons to be

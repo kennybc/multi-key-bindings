@@ -2,7 +2,6 @@ package us.kenny.core;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import java.util.UUID;
-import net.minecraft.client.KeyMapping.Category;
 
 /**
  * Need to create this class to mimic a KeyBinding because the native KeyBinding
@@ -12,13 +11,13 @@ public class MultiKeyBinding {
 
     private final UUID id;
     private final String action;
-    private Category category;
+    private String category;
     private InputConstants.Key key;
 
     private boolean pressed;
     private int timesPressed;
 
-    public MultiKeyBinding(UUID id, String action, Category category, InputConstants.Key key) {
+    public MultiKeyBinding(UUID id, String action, String category, InputConstants.Key key) {
         this.id = id;
         this.action = action;
         this.category = category;
@@ -42,11 +41,11 @@ public class MultiKeyBinding {
         return this.action;
     }
 
-    public Category getCategory() {
+    public String getCategory() {
         return this.category;
     }
 
-    public void setCategory(Category category) {
+    public void setCategory(String category) {
         this.category = category;
     }
 

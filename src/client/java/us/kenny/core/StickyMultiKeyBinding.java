@@ -3,7 +3,6 @@ package us.kenny.core;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
-import net.minecraft.client.KeyMapping.Category;
 
 /**
  * Only used for sprint and sneak.
@@ -13,7 +12,7 @@ public class StickyMultiKeyBinding extends MultiKeyBinding {
     private boolean releasedByScreenWhenDown; // Toggle was released by opening a screen
     private final boolean shouldRestore; // Should toggle be restored after ^ screen is closed?
 
-    public StickyMultiKeyBinding(UUID id, String action, Category category, InputConstants.Key key,
+    public StickyMultiKeyBinding(UUID id, String action, String category, InputConstants.Key key,
             BooleanSupplier toggleGetter, boolean shouldRestore) {
         super(id, action, category, key);
         this.toggleGetter = toggleGetter;

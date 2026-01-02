@@ -12,9 +12,6 @@ import us.kenny.core.MultiKeyBindingEntry;
 import us.kenny.core.MultiKeyBindingScreen;
 import us.kenny.mixin.KeyBindsListAccessor;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class ControllingMultiKeyBindingEntry extends MultiKeyBindingEntry {
     private final NewKeyBindsList.KeyEntry parentEntry;
 
@@ -35,15 +32,8 @@ public class ControllingMultiKeyBindingEntry extends MultiKeyBindingEntry {
                         (button) -> {
                             MultiKeyBindingManager.removeKeyBinding(multiKeyBinding);
                             this.parentScreen.setSelectedMultiKeyBinding(null);
-
-                            List<KeyBindsList.Entry> entries = new ArrayList<>(parentList.children());
-                            entries.remove(this);
-
+                            parentList.children().remove(this);
                             parentList.allEntries.remove(this);
-                            parentList.clearEntries();
-                            for (KeyBindsList.Entry entry : entries) {
-                                parentList.addEntryInternal(entry);
-                            }
                         })
                 .size(20, 20)
                 .build();

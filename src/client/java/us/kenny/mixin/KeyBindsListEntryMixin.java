@@ -1,6 +1,6 @@
 package us.kenny.mixin;
 
-import com.google.common.collect.ImmutableList;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
@@ -29,12 +30,6 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
     @Final
     @Shadow
     private KeyMapping key;
-    @Final
-    @Shadow
-    private Button changeButton;
-    @Final
-    @Shadow
-    private Button resetButton;
 
     @Unique
     private Button addKeyBindingButton;
@@ -87,8 +82,12 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
         // Mimic the positioning and layout of the existing buttons
         int scrollbarX = this.keyBindsList.getRowRight() + 6 + 2;
         int buttonX = scrollbarX - 165; // 5 wide gap between buttons, 20 wide "+" button
-        int buttonY = this.getContentY() - 2;
-        // Align with the existing buttons
+        int buttonY = this.getContentY() - 2; // Align with the existing buttons
+        
+        // Shift "+" button to the left if the "Ok Zoomer" settings button is also rendered
+        if (key.getName().equals("key.ok_zoomer.zoom") && this.children().size() > 3) {
+            buttonX -= 22;
+        }
 
         this.addKeyBindingButton.setPosition(buttonX, buttonY);
         this.addKeyBindingButton.render(graphics, mouseX, mouseY, deltaTicks);
@@ -98,13 +97,29 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
      * The following override hardcoded lists that enable our custom buttons to be
      * interacted with.
      */
-    @Override
-    public List<? extends GuiEventListener> children() {
-        return ImmutableList.of(this.changeButton, this.resetButton, this.addKeyBindingButton);
+    @ModifyReturnValue(method = "children", at = @At("RETURN"))
+    private List<? extends GuiEventListener> modifyChildren(
+            List<? extends GuiEventListener> original
+    ) {
+        if (this.addKeyBindingButton == null || original.contains(this.addKeyBindingButton)) {
+            return original;
+        }
+
+        List<GuiEventListener> list = new ArrayList<>(original);
+        list.add(this.addKeyBindingButton);
+        return list;
     }
 
-    @Override
-    public List<? extends NarratableEntry> narratables() {
-        return ImmutableList.of(this.changeButton, this.resetButton, this.addKeyBindingButton);
+    @ModifyReturnValue(method = "narratables", at = @At("RETURN"))
+    private List<? extends NarratableEntry> modifyNarratables(
+            List<? extends NarratableEntry> original
+    ) {
+        if (this.addKeyBindingButton == null || original.contains(this.addKeyBindingButton)) {
+            return original;
+        }
+
+        List<NarratableEntry> list = new ArrayList<>(original);
+        list.add(this.addKeyBindingButton);
+        return list;
     }
 }

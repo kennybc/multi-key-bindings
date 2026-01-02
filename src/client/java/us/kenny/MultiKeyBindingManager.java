@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import net.minecraft.client.KeyMapping.Category;
 import net.minecraft.client.Options;
 import java.util.function.BooleanSupplier;
 
@@ -24,9 +23,7 @@ public class MultiKeyBindingManager {
     private static Map<String, StickySpec> stickySpecs() {
         return Map.of(
             "multi.key.sneak",  new StickySpec(gameOptions.toggleCrouch()::get, true),
-            "multi.key.sprint", new StickySpec(gameOptions.toggleSprint()::get, true),
-            "multi.key.use",    new StickySpec(gameOptions.toggleUse()::get, false),
-            "multi.key.attack", new StickySpec(gameOptions.toggleAttack()::get, true)
+            "multi.key.sprint", new StickySpec(gameOptions.toggleSprint()::get, true)
         );
     }
 
@@ -44,7 +41,7 @@ public class MultiKeyBindingManager {
      *
      * @see MultiKeyBindingManager#addKeyBinding(String, Category, String, UUID)
      */
-    public static MultiKeyBinding addKeyBinding(String action, Category category, InputConstants.Key key) {
+    public static MultiKeyBinding addKeyBinding(String action, String category, InputConstants.Key key) {
         UUID newId = UUID.randomUUID();
         MultiKeyBinding multiKeyBinding = addKeyBinding("multi." + action, category, key.getName(), newId);
 
@@ -62,7 +59,7 @@ public class MultiKeyBindingManager {
      *                       "key.keyboard.w").
      * @param newId          The ID to set the binding to.
      */
-    public static MultiKeyBinding addKeyBinding(String action, Category category, String translationKey, UUID newId) {
+    public static MultiKeyBinding addKeyBinding(String action, String category, String translationKey, UUID newId) {
         InputConstants.Key key = InputConstants.getKey(translationKey);
         MultiKeyBinding multiKeyBinding;
 

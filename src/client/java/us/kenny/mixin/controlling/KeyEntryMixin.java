@@ -61,14 +61,8 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
         MultiKeyBindingEntry multiKeyBindingEntry = new ControllingMultiKeyBindingEntry(newKeyBindsList, (KeyEntry) (Object) this,
                 multiKeyBinding);
 
-        List<KeyBindsList.Entry> entries = new ArrayList<>(newKeyBindsList.children());
-        entries.add(newKeyBindsList.children().indexOf(this) + 1, multiKeyBindingEntry);
-
         newKeyBindsList.allEntries.add(newKeyBindsList.allEntries.indexOf(this) + 1, multiKeyBindingEntry);
-        newKeyBindsList.clearEntries();
-        for (KeyBindsList.Entry entry : entries) {
-            newKeyBindsList.addEntryInternal(entry);
-        }
+        newKeyBindsList.children().add(newKeyBindsList.children().indexOf(this) + 1, multiKeyBindingEntry);
     }
 
     @Unique
@@ -95,14 +89,15 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     /**
      * @see us.kenny.mixin.KeyBindsListEntryMixin#onRenderContent
      */
-    @Inject(method = "renderContent", at = @At("HEAD"))
-    private void onRenderContent(GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks, CallbackInfo ci) {
+    @Inject(method = "render", at = @At("HEAD"))
+    private void onRender(GuiGraphics graphics, int index, int y, int x, int entryWidth, int entryHeight, int mouseX,
+            int mouseY, boolean hovered, float tickDelta, CallbackInfo ci) {
         int scrollbarX = newKeyBindsList.getRowRight() + 6 + 2;
         int buttonX = scrollbarX - 165;
-        int buttonY = this.getContentY() - 2;
+        int buttonY = y - 2;
 
         addKeyBindingButton.setPosition(buttonX, buttonY);
-        addKeyBindingButton.render(graphics, mouseX, mouseY, deltaTicks);
+        addKeyBindingButton.render(graphics, mouseX, mouseY, tickDelta);
     }
 
     /**
@@ -110,7 +105,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
      * 
      * @see us.kenny.core.controlling.ControllingHideableKeyEntry
      */
-    @WrapOperation(method = "renderContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/Button;render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V", ordinal = 0))
+    @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/Button;render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V", ordinal = 0))
     private void onResetButtonRender(Button button, GuiGraphics graphics, int mouseX, int mouseY,
             float delta,
             Operation<Void> original) {
@@ -124,7 +119,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
      * 
      * @see us.kenny.core.controlling.ControllingHideableKeyEntry
      */
-    @WrapOperation(method = "renderContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/Button;render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V", ordinal = 1))
+    @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/Button;render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V", ordinal = 1))
     private void onChangeKeyButtonRender(Button button, GuiGraphics graphics, int mouseX, int mouseY,
             float delta,
             Operation<Void> original) {

@@ -30,7 +30,7 @@ public class ControllingConstantsMixin {
     @Unique
     private static Optional<String> testMultiKeyBinding(String key, MultiKeyBinding multiKeyBinding) {
         return switch (key) {
-            case "category" -> Optional.of(multiKeyBinding.getCategory().label().getString());
+            case "category" -> Optional.of(multiKeyBinding.getCategory());
             case "key" -> Optional.of(multiKeyBinding.getKey().getName());
             case "name" -> Optional.of(
                     Component.translatable(multiKeyBinding.getAction().replaceFirst("^multi.", "")).getString());

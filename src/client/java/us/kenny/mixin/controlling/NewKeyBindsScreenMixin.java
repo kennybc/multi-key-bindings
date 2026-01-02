@@ -1,10 +1,9 @@
 package us.kenny.mixin.controlling;
 
 import com.blamejared.controlling.api.SortOrder;
-import com.blamejared.controlling.api.entries.IKeyEntry;
 import com.blamejared.controlling.client.CustomList;
-import com.blamejared.controlling.client.NewKeyBindsList;
 import com.blamejared.controlling.client.NewKeyBindsScreen;
+import com.blamejared.controlling.client.NewKeyBindsList.KeyEntry;
 import com.blamejared.searchables.api.SearchableType;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -13,6 +12,7 @@ import net.minecraft.client.Options;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.*;
@@ -40,35 +40,36 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
     /**
      * Our custom key bindings cannot be sorted, so we must first remove them before sorting. After sorting, we add them back in place.
      */
-    @WrapOperation(method = "filterKeys(Ljava/lang/String;)V", at = @At(value = "INVOKE", target = "Ljava/util/function/Consumer;accept(Ljava/lang/Object;)V"))
-    private void onFilterKeysSort(Consumer<List<NewKeyBindsList.KeyEntry>> instance, Object object, Operation<Void> original) {
+    @WrapOperation(method = "Lcom/blamejared/controlling/client/NewKeyBindsScreen;filterKeys(Ljava/lang/String;)V", at = @At(value = "INVOKE", target = "Ljava/util/function/Consumer;accept(Ljava/lang/Object;)V"))
+    private void onFilterKeysSort(Consumer<List<KeyBindsList.Entry>> postConsumer, Object allEntries, Operation<Void> original) {
+        // Only call to consumer in this method is with a list of entries
         @SuppressWarnings("unchecked")
-        List<NewKeyBindsList.Entry> entries = ((List<NewKeyBindsList.Entry>) object);
-        CustomList list = this.getCustomList();
+        List<KeyBindsList.Entry> list = ((List<KeyBindsList.Entry>) allEntries);
 
         // Separate out any MultiKeyBindingEntry so they don't undergo sorting
         HashMap<String, List<MultiKeyBindingEntry>> multiKeyBindingEntries = new HashMap<>();
+        List<KeyBindsList.Entry> regularEntries = new ArrayList<>();
 
-        for (NewKeyBindsList.Entry entry : entries) {
+        for (KeyBindsList.Entry entry : list) {
             if (entry instanceof MultiKeyBindingEntry multiKeyBindingEntry) {
                 multiKeyBindingEntries
                         .computeIfAbsent(multiKeyBindingEntry.getMultiKeyBinding().getAction(), k -> new ArrayList<>())
                         .add(multiKeyBindingEntry);
+            } else {
+                regularEntries.add(entry);
             }
         }
 
         // Sort only the regular entries
-        entries.removeIf((entry) -> (entry instanceof MultiKeyBindingEntry) || !(entry instanceof IKeyEntry));
-        list.sort(this.sortOrder);
-        List<NewKeyBindsList.Entry> sortedEntries = new ArrayList<>(list.children());
+        original.call(postConsumer, regularEntries);
 
         // Clear and rebuild children with custom bindings in correct place
-        list.clearEntries();
-        for (NewKeyBindsList.Entry entry : sortedEntries) {
-            if (entry instanceof NewKeyBindsList.KeyEntry keyEntry) {
+        list.clear();
+        for (KeyBindsList.Entry entry : regularEntries) {
+            list.add(entry);
+            if (entry instanceof KeyEntry keyEntry) {
                 String multiAction = "multi." + keyEntry.getKey().getName();
-                list.addEntryInternal(entry);
-                multiKeyBindingEntries.getOrDefault(multiAction, Collections.emptyList()).forEach(list::addEntryInternal);
+                list.addAll(multiKeyBindingEntries.getOrDefault(multiAction, Collections.emptyList()));
             }
         }
     }

@@ -38,6 +38,7 @@ jobs:
           CURSEFORGE_AUTHOR_TOKEN: ${{ secrets.CURSEFORGE_AUTHOR_TOKEN }}
         run: |
           GAME_VERSIONS=$(curl -s -H "X-Api-Token: $CURSEFORGE_AUTHOR_TOKEN" "https://minecraft.curseforge.com/api/game/versions")
+          FABRIC_ID=$(echo "$GAME_VERSIONS" | jq -r '.[] | select(.name=="Fabric") | .id')
 
           TAGS=$(git tag --list | sort -V)
           for tag in $TAGS; do
@@ -74,7 +75,7 @@ jobs:
             \"changelogType\": \"markdown\", \
             \"displayName\": \"$tag\", \
             \"releaseType\": \"release\", \
-            \"gameVersions\": [$VERSION_ID], \
+            \"gameVersions\": [$VERSION_ID, $FABRIC_ID], \
             }"
 
             curl -v -X POST "https://minecraft.curseforge.com/api/projects/1364298/upload-file" \

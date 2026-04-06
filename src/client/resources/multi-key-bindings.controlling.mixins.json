@@ -1,7 +1,7 @@
 {
   "required": true,
   "package": "us.kenny.mixin.controlling",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_17",
   "plugin": "us.kenny.mixin.controlling.ControllingMixinPlugin",
   "client": [
     "ControllingConstantsMixin",

@@ -8,7 +8,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
@@ -95,14 +95,14 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     /**
      * @see us.kenny.mixin.KeyBindsListEntryMixin#onRenderContent
      */
-    @Inject(method = "renderContent", at = @At("HEAD"))
-    private void onRenderContent(GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks, CallbackInfo ci) {
+    @Inject(method = "extractContent", at = @At("HEAD"))
+    private void onExtractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks, CallbackInfo ci) {
         int scrollbarX = newKeyBindsList.getRowRight() + 6 + 2;
         int buttonX = scrollbarX - 165;
         int buttonY = this.getContentY() - 2;
 
         addKeyBindingButton.setPosition(buttonX, buttonY);
-        addKeyBindingButton.render(graphics, mouseX, mouseY, deltaTicks);
+        addKeyBindingButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
     }
 
     /**
@@ -110,8 +110,8 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
      * 
      * @see us.kenny.core.controlling.ControllingHideableKeyEntry
      */
-    @WrapOperation(method = "renderContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/Button;render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V", ordinal = 0))
-    private void onResetButtonRender(Button button, GuiGraphics graphics, int mouseX, int mouseY,
+    @WrapOperation(method = "extractContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/Button;extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V", ordinal = 0))
+    private void onResetButtonExtractContent(Button button, GuiGraphicsExtractor graphics, int mouseX, int mouseY,
             float delta,
             Operation<Void> original) {
         button.active = !this.hidden && !this.key.isDefault();
@@ -124,8 +124,8 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
      * 
      * @see us.kenny.core.controlling.ControllingHideableKeyEntry
      */
-    @WrapOperation(method = "renderContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/Button;render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V", ordinal = 1))
-    private void onChangeKeyButtonRender(Button button, GuiGraphics graphics, int mouseX, int mouseY,
+    @WrapOperation(method = "extractContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/Button;extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V", ordinal = 1))
+    private void onChangeKeyButtonExtractContent(Button button, GuiGraphicsExtractor graphics, int mouseX, int mouseY,
             float delta,
             Operation<Void> original) {
         button.active = !this.hidden;

@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -79,7 +79,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
      * Renders our custom entry in the list of key bindings.
      */
     @Override
-    public void renderContent(GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks) {
+    public void extractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks) {
         // Render buttons
         int scrollbarX = this.parentList.getRowRight() + 6 + 2;
         int contentX = this.getContentX();
@@ -88,15 +88,15 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
 
         int resetButtonX = scrollbarX - this.resetButton.getWidth() - 10;
         this.resetButton.setPosition(resetButtonX, buttonY);
-        this.resetButton.render(graphics, mouseX, mouseY, deltaTicks);
+        this.resetButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
 
         int editButtonX = resetButtonX - this.editButton.getWidth() - 5;
         this.editButton.setPosition(editButtonX, buttonY);
-        this.editButton.render(graphics, mouseX, mouseY, deltaTicks);
+        this.editButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
 
         int removeKeyBindingButtonX = editButtonX - this.removeKeyBindingButton.getWidth() - 5;
         this.removeKeyBindingButton.setPosition(removeKeyBindingButtonX, buttonY);
-        this.removeKeyBindingButton.render(graphics, mouseX, mouseY, deltaTicks);
+        this.removeKeyBindingButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
 
         // Render an arrow instead of action name
         int leftOffset = 10;

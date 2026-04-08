@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 25
 
       - name: Install dependencies
         run: sudo apt-get install -y jq
@@ -40,14 +40,28 @@ jobs:
           GAME_VERSIONS=$(curl -s -H "X-Api-Token: $CURSEFORGE_AUTHOR_TOKEN" "https://minecraft.curseforge.com/api/game/versions")
           FABRIC_ID=$(echo "$GAME_VERSIONS" | jq -r '.[] | select(.name=="Fabric") | .id')
 
+          # Fetch all published CurseForge files with pagination
+          PUBLISHED_FILES="[]"
+          INDEX=0
+          PAGE_SIZE=50
+          while true; do
+            PAGE=$(curl -s -H "x-api-token: $CURSEFORGE_TOKEN" \
+              "https://api.curseforge.com/v1/mods/1364298/files?index=$INDEX&pageSize=$PAGE_SIZE")
+            DATA=$(echo "$PAGE" | jq '.data')
+            PUBLISHED_FILES=$(jq -n --argjson a "$PUBLISHED_FILES" --argjson b "$DATA" '$a + $b')
+            COUNT=$(echo "$DATA" | jq 'length')
+            if [ "$COUNT" -lt "$PAGE_SIZE" ]; then
+              break
+            fi
+            INDEX=$((INDEX + PAGE_SIZE))
+          done
+
           TAGS=$(git tag --list | sort -V)
           for tag in $TAGS; do
             echo "Checking release $tag"
-            
+
             # Skip if already published
-            EXISTS=$(curl -s -H "x-api-token: $CURSEFORGE_TOKEN" \
-              "https://api.curseforge.com/v1/mods/1364298/files" \
-              | jq -r ".data[] | select(.displayName==\"$tag\") | .id")
+            EXISTS=$(echo "$PUBLISHED_FILES" | jq -r ".[] | select(.displayName==\"$tag\") | .id")
 
             if [ -n "$EXISTS" ]; then
               echo "Already published to CurseForge: $tag"

@@ -32,7 +32,7 @@
   "accessWidener": "multi-key-bindings.accesswidener",
 	"depends": {
 		"fabricloader": ">=0.18.6",
-		"minecraft": "~26.1",
+		"minecraft": "~26.1.1",
 		"java": ">=25",
 		"fabric-api": "*"
 	}

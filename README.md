@@ -9,7 +9,7 @@ This mod adds extra functionality to the native key binds screen. Simply click t
 
 ## Versions and Compatibility
 
-Created for Minecraft versions 1.20.x and 1.21.x
+Created for Minecraft versions 1.20.x, 1.21.x, and 26.1.x
 
 <br>
 

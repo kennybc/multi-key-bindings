@@ -10,85 +10,99 @@ env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  build-and-release:
+  discover:
     runs-on: ubuntu-latest
-
+    outputs:
+      branches: ${{ steps.set.outputs.branches }}
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: true
 
-      - name: Set up JDK
-        uses: actions/setup-java@v3
-        with:
-          distribution: temurin
-          java-version: 21
-
-      - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y jq xmlstarlet
-
-      - name: Get version branches
-        id: branches
+      - id: set
         run: |
-          BRANCHES=$(git branch -r | sed 's|origin/||' | grep -vE 'main|HEAD' | xargs)
-          echo "BRANCHES=$BRANCHES" >> $GITHUB_ENV
+          BRANCHES=$(git branch -r | sed 's|origin/||' | grep -vE 'main|HEAD' | jq -R -s -c 'split(" ") | map(select(length > 0))')
+          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
           echo "Branches: $BRANCHES"
 
-      - name: Make Gradle wrapper executable
-        run: chmod +x ./gradlew
+  build:
+    needs: discover
+    runs-on: ubuntu-latest
 
-      - name: Tag, build, and release
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ fromJson(needs.discover.outputs.branches) }}
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: gradle
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Extract version
+        id: version
         run: |
-          for b in $BRANCHES; do
-            echo "Processing $b"
-            git checkout "$b"
+          MOD_VERSION=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)
+          echo "mod_version=$MOD_VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $MOD_VERSION"
 
-            # Extract mod_version from gradle.properties
-            MOD_VERSION=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)
-            echo "Using mod version: $MOD_VERSION"
+      - name: Create tag if needed
+        run: |
+          if ! git ls-remote --tags origin | grep -q "refs/tags/${{ steps.version.outputs.mod_version }}"; then
+            git tag "${{ steps.version.outputs.mod_version }}"
+            git push origin "${{ steps.version.outputs.mod_version }}"
+          fi
 
-            # Create tag if it doesn't exist
-            if ! git rev-parse "refs/tags/$MOD_VERSION" >/dev/null 2>&1; then
-                git tag "$MOD_VERSION"
-                git push origin "$MOD_VERSION"
-            fi
+      - name: Extract changelog
+        id: changelog
+        run: |
+          MOD_ONLY=$(echo "${{ steps.version.outputs.mod_version }}" | cut -d+ -f1)
+          CHANGELOG=$(awk "/^## $MOD_ONLY /{flag=1;next}/^## /{flag=0}flag" CHANGELOG.md | tail -n +2)
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="Release for Minecraft ${{ matrix.branch }}"
+          fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-            # Extract changelog for this version (skip the header line)
-            MOD_ONLY=$(echo "$MOD_VERSION" | cut -d+ -f1)
-            CHANGELOG=$(awk "/^## $MOD_ONLY /{flag=1;next}/^## /{flag=0}flag" CHANGELOG.md | tail -n +2)
-            if [ -z "$CHANGELOG" ]; then
-              CHANGELOG="Release for Minecraft $b"
-            fi
+      - name: Create release if needed
+        run: |
+          if ! gh release view "${{ steps.version.outputs.mod_version }}" >/dev/null 2>&1; then
+            gh release create "${{ steps.version.outputs.mod_version }}" \
+              --title "Release ${{ steps.version.outputs.mod_version }}" \
+              --notes "${{ steps.changelog.outputs.changelog }}"
+          fi
 
-            # Check if release exists
-            if ! gh release view "$MOD_VERSION" >/dev/null 2>&1; then
-                echo "Release does not exist, creating..."
-                gh release create "$MOD_VERSION" \
-                  --title "Release $MOD_VERSION" \
-                  --notes "$CHANGELOG" \
-                  --draft=false \
-                  --prerelease=false
-            fi
+      - name: Skip if JAR already exists
+        id: skip
+        run: |
+          if gh release view "${{ steps.version.outputs.mod_version }}" --json assets -q '.assets[].name' | grep -q '\.jar$'; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
 
-            # Skip if the release already has a jar attached
-            JAR_ATTACHED=$(gh release view "$MOD_VERSION" --json assets -q '.assets[].name' | grep -E '\.jar$' || true)
-            if [ -n "$JAR_ATTACHED" ]; then
-                echo "JAR already attached to release $MOD_VERSION, skipping upload."
-                continue
-            fi
+      - name: Build
+        if: steps.skip.outputs.skip != 'true'
+        run: bash ./gradlew build --no-daemon --parallel --build-cache
 
-            # Build the mod JAR
-            ./gradlew build
-
-            # Find built jar
-            JAR_PATH=$(ls build/libs/*"$MOD_VERSION"*.jar | grep -v 'sources' | head -n1)
-            if [ -z "$JAR_PATH" ]; then
-              echo "Error: Could not find built JAR for version $MOD_VERSION"
-              exit 1
-            fi
-
-            # Upload the jar
-            gh release upload "$MOD_VERSION" "$JAR_PATH" --clobber
-          done
+      - name: Upload jar
+        if: steps.skip.outputs.skip != 'true'
+        run: |
+          JAR_PATH=$(ls build/libs/*"${{ steps.version.outputs.mod_version }}"*.jar | grep -v 'sources' | head -n1)
+          if [ -z "$JAR_PATH" ]; then
+            echo "No JAR found"
+            exit 1
+          fi
+          gh release upload "${{ steps.version.outputs.mod_version }}" "$JAR_PATH" --clobber

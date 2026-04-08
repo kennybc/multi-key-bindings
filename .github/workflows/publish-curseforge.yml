@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 25
+          java-version: 21
 
       - name: Install dependencies
         run: sudo apt-get install -y jq
@@ -37,33 +37,19 @@ jobs:
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
           CURSEFORGE_AUTHOR_TOKEN: ${{ secrets.CURSEFORGE_AUTHOR_TOKEN }}
         run: |
+          echo "Fetching game versions..."
           GAME_VERSIONS=$(curl -s -H "X-Api-Token: $CURSEFORGE_AUTHOR_TOKEN" "https://minecraft.curseforge.com/api/game/versions")
           FABRIC_ID=$(echo "$GAME_VERSIONS" | jq -r '.[] | select(.name=="Fabric") | .id')
 
-          # Fetch all published CurseForge files with pagination
-          PUBLISHED_FILES="[]"
-          INDEX=0
-          PAGE_SIZE=50
-          while true; do
-            PAGE=$(curl -s -H "x-api-token: $CURSEFORGE_TOKEN" \
-              "https://api.curseforge.com/v1/mods/1364298/files?index=$INDEX&pageSize=$PAGE_SIZE")
-            DATA=$(echo "$PAGE" | jq '.data')
-            PUBLISHED_FILES=$(jq -n --argjson a "$PUBLISHED_FILES" --argjson b "$DATA" '$a + $b')
-            COUNT=$(echo "$DATA" | jq 'length')
-            if [ "$COUNT" -lt "$PAGE_SIZE" ]; then
-              break
-            fi
-            INDEX=$((INDEX + PAGE_SIZE))
-          done
+          echo "Fetching all published CurseForge files..."
+          PUBLISHED_FILES=$(curl -s -H "X-Api-Token: $CURSEFORGE_TOKEN" "https://api.curseforge.com/v1/mods/1364298/files" | jq -r '.data[].displayName')
 
+          echo "Starting release loop..."
           TAGS=$(git tag --list | sort -V)
           for tag in $TAGS; do
             echo "Checking release $tag"
 
-            # Skip if already published
-            EXISTS=$(echo "$PUBLISHED_FILES" | jq -r ".[] | select(.displayName==\"$tag\") | .id")
-
-            if [ -n "$EXISTS" ]; then
+            if echo "$PUBLISHED_FILES" | grep -qx "$tag"; then
               echo "Already published to CurseForge: $tag"
               continue
             fi
@@ -71,16 +57,16 @@ jobs:
             echo "Fetching release notes for $tag"
             CHANGELOG=$(gh release view "$tag" --json body -q '.body' | jq -Rs .)
 
-            echo "Publishing release $tag to CurseForge"
+            echo "Downloading JAR for $tag"
+            JAR_URL=$(gh release view "$tag" --json assets -q '.assets[] | select(.name | endswith(".jar")) | .url')
             JAR_NAME="multi-key-bindings-${tag}.jar"
-            JAR=$(gh release view "$tag" --json assets -q '.assets[] | select(.name | endswith(".jar")) | .url')
-            curl -sL "$JAR" -o "$JAR_NAME"
+            curl -sL "$JAR_URL" -o "$JAR_NAME"
 
             VERSION=$(echo "$tag" | cut -d+ -f2)
             VERSION_ID=$(echo "$GAME_VERSIONS" | jq -r ".[] | select(.name==\"$VERSION\") | .id" | head -n1)
 
             if [ -z "$VERSION_ID" ]; then
-              echo "Could not find CurseForge ID for Minecraft version $VERSION"
+              echo "Could not find CurseForge ID for Minecraft version $VERSION, skipping..."
               continue
             fi
 
@@ -89,12 +75,12 @@ jobs:
             \"changelogType\": \"markdown\", \
             \"displayName\": \"$tag\", \
             \"releaseType\": \"release\", \
-            \"gameVersions\": [$VERSION_ID, $FABRIC_ID], \
+            \"gameVersions\": [$VERSION_ID, $FABRIC_ID]\
             }"
 
-            curl -v -X POST "https://minecraft.curseforge.com/api/projects/1364298/upload-file" \
+            echo "Uploading $JAR_NAME to CurseForge..."
+            curl -s -X POST "https://minecraft.curseforge.com/api/projects/1364298/upload-file" \
               -H "X-Api-Token: $CURSEFORGE_AUTHOR_TOKEN" \
               -F "metadata=$METADATA;type=application/json" \
               -F "file=@$JAR_NAME"
-
           done

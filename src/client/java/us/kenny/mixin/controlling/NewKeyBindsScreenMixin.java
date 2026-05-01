@@ -13,10 +13,15 @@ import net.minecraft.client.Options;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.*;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import us.kenny.core.MultiKeyBindingEntry;
+import us.kenny.core.MultiKeyBindingScreen;
+import us.kenny.core.MultiKeyBindingScreenHelper;
 import us.kenny.core.controlling.ControllingHideableKeyEntry;
 import us.kenny.core.controlling.ControllingMultiKeyBindingEntry;
 
@@ -37,6 +42,28 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
 
     public NewKeyBindsScreenMixin(Screen screen, Options settings) {
         super(screen, settings);
+    }
+
+    /**
+     * @see us.kenny.mixin.KeyBindsScreenMixin#onMouseClicked
+     */
+    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true, remap = false)
+    public void onMouseClicked(MouseButtonEvent mouseButtonEvent, boolean bl, CallbackInfoReturnable<Boolean> cir) {
+        if (MultiKeyBindingScreenHelper.handleMouseClicked((MultiKeyBindingScreen) this, this.getKeyBindsList(),
+                mouseButtonEvent)) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    /**
+     * @see us.kenny.mixin.KeyBindsScreenMixin#onKeyPressed
+     */
+    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true, remap = false)
+    public void onKeyPressed(KeyEvent keyEvent, CallbackInfoReturnable<Boolean> cir) {
+        if (MultiKeyBindingScreenHelper.handleKeyPressed((MultiKeyBindingScreen) this, this.getKeyBindsList(),
+                keyEvent)) {
+            cir.setReturnValue(true);
+        }
     }
 
     /**

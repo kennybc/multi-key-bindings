@@ -103,6 +103,11 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
         this.removeKeyBindingButton.setPosition(removeKeyBindingButtonX, buttonY);
         this.removeKeyBindingButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
 
+        if (this.duplicate) {
+            int stripeLeft = this.editButton.getX() - 6;
+            graphics.fill(stripeLeft, this.getContentY() - 1, stripeLeft + 3, this.getContentBottom(), -256);
+        }
+
         // Render an arrow instead of action name
         int leftOffset = 10;
         int topOffset = 5;
@@ -135,9 +140,13 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
 
         MutableComponent duplicates = Component.empty();
         if (!this.multiKeyBinding.getKey().equals(InputConstants.UNKNOWN)) {
+            List<InputConstants.Key> modifiers = ModifierManager.getModifiers(this.multiKeyBinding.getId().toString());
+            String selfKeyName = this.multiKeyBinding.getKey().getName();
+
             for (KeyMapping kb : MultiKeyBindingManager.getGameOptions().keyMappings) {
-                if (!kb.isUnbound() && kb.saveString()
-                        .equals(this.multiKeyBinding.getKey().getName())) {
+                if (!kb.isUnbound() && kb.saveString().equals(selfKeyName)
+                        && ModifierManager.modifiersEqual(modifiers,
+                                ModifierManager.getModifiers(kb.getName()))) {
                     if (this.duplicate) {
                         duplicates.append(", ");
                     }
@@ -148,9 +157,11 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
             }
 
             for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
-                if (!mkb.getId().equals(this.multiKeyBinding.getId()) && !mkb.getKey().equals(InputConstants.UNKNOWN) &&
-                        mkb.getKey().getName()
-                                .equals(this.multiKeyBinding.getKey().getName())) {
+                if (!mkb.getId().equals(this.multiKeyBinding.getId())
+                        && !mkb.getKey().equals(InputConstants.UNKNOWN)
+                        && mkb.getKey().getName().equals(selfKeyName)
+                        && ModifierManager.modifiersEqual(modifiers,
+                                ModifierManager.getModifiers(mkb.getId().toString()))) {
                     if (this.duplicate) {
                         duplicates.append(", ");
                     }

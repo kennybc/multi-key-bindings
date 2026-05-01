@@ -118,6 +118,17 @@ public class ModifierManager {
     }
 
     /**
+     * Compare two modifier lists as unordered sets. Used to decide whether
+     * two bindings collide: bindings with different modifier requirements do
+     * not conflict at runtime and should not be flagged as duplicates.
+     */
+    public static boolean modifiersEqual(List<InputConstants.Key> a, List<InputConstants.Key> b) {
+        if (a.size() != b.size())
+            return false;
+        return a.containsAll(b);
+    }
+
+    /**
      * Build a display name for a key, prefixed with its required modifiers (e.g.
      * "Shift+Space").
      *

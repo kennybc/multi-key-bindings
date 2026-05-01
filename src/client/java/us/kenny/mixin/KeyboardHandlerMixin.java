@@ -14,8 +14,14 @@ import us.kenny.core.MultiKeyBindingScreen;
 
 @Mixin(KeyboardHandler.class)
 public class KeyboardHandlerMixin {
+
+    /**
+     * Injected in the method keyPress:
+     * Clears selected key binding so we can stop tracking modifier key events in
+     * the controls screen.
+     */
     @Inject(method = "keyPress", at = @At(value = "FIELD", target = "Lnet/minecraft/client/KeyboardHandler;debugCrashKeyTime:J", ordinal = 0, opcode = Opcodes.GETFIELD))
-    private void onKey(
+    private void onKeyPress(
             long window,
             int action,
             KeyEvent keyEvent,

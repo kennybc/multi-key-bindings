@@ -138,12 +138,18 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
         original.call(button, graphics, mouseX, mouseY, delta);
     }
 
+    /**
+     * @see us.kenny.mixin.KeyBindsListEntryMixin#onResetButtonClicked
+     */
     @Inject(method = "lambda$new$2(Lcom/blamejared/controlling/client/NewKeyBindsList;Lnet/minecraft/client/KeyMapping;Lnet/minecraft/client/gui/components/Button;)V", at = @At("HEAD"), remap = false)
     private static void onResetButtonClicked(NewKeyBindsList listWidget, KeyMapping keyBinding, Button buttonWidget,
             CallbackInfo callbackInfo) {
         ModifierManager.setModifiers(keyBinding.getName(), List.of());
     }
 
+    /**
+     * @see us.kenny.mixin.KeyBindsListEntryMixin#onEditButtonClicked
+     */
     @Inject(method = "lambda$new$0(Lcom/blamejared/controlling/client/NewKeyBindsList;Lnet/minecraft/client/KeyMapping;Lnet/minecraft/client/gui/components/Button;)V", at = @At("HEAD"), remap = false)
     private static void onEditButtonClicked(NewKeyBindsList listWidget, KeyMapping keyBinding, Button buttonWidget,
             CallbackInfo callbackInfo) {

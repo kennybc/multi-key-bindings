@@ -12,16 +12,16 @@ import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.network.chat.Component;
 
-/**
- * When a button's message is wider than the button itself (e.g. a key bind with
- * several modifier prefixes like "Left Shift+Left Ctrl+K"), scale the label
- * down. Short labels still go through the vanilla path unchanged.
- */
 @Mixin(AbstractButton.class)
 public abstract class AbstractButtonMixin {
     private static final int LABEL_HORIZONTAL_PADDING = 3;
     private static final float MIN_LABEL_SCALE = 0.65f;
 
+    /**
+     * When a button's message is wider than the button itself (e.g. a key bind with
+     * several modifier prefixes like "Left Shift+Left Ctrl+K"), scale the label
+     * down. Short labels still go through the vanilla path unchanged.
+     */
     @Inject(method = "extractDefaultLabel", at = @At("HEAD"), cancellable = true)
     private void onExtractDefaultLabel(ActiveTextCollector collector, CallbackInfo ci) {
         AbstractButton self = (AbstractButton) (Object) this;

@@ -97,12 +97,18 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
         this.addKeyBindingButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
     }
 
+    /**
+     * Clear modifiers when the reset button is clicked.
+     */
     @Inject(method = "lambda$new$2(Lnet/minecraft/client/KeyMapping;Lnet/minecraft/client/gui/screens/options/controls/KeyBindsList;Lnet/minecraft/client/gui/components/Button;)V", at = @At("HEAD"))
     private static void onResetButtonClicked(KeyMapping keyBinding, KeyBindsList listWidget, Button buttonWidget,
             CallbackInfo callbackInfo) {
         ModifierManager.setModifiers(keyBinding.getName(), List.of());
     }
 
+    /**
+     * Clear a binding when the edit button is clicked to simplify modifier logic.
+     */
     @Inject(method = "lambda$new$0(Lnet/minecraft/client/gui/screens/options/controls/KeyBindsList;Lnet/minecraft/client/KeyMapping;Lnet/minecraft/client/gui/components/Button;)V", at = @At("HEAD"))
     private static void onEditButtonClicked(KeyBindsList listWidget, KeyMapping keyBinding, Button buttonWidget,
             CallbackInfo callbackInfo) {

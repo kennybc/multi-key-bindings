@@ -24,7 +24,7 @@ public class ControllingConstantsMixin {
     /**
      * Tests a custom key binding against the search term.
      *
-     * @param key The search term key: category, key, or name.
+     * @param key             The search term key: category, key, or name.
      * @param multiKeyBinding The custom key binding we are testing.
      */
     @Unique

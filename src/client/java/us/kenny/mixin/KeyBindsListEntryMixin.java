@@ -9,6 +9,8 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
@@ -82,7 +84,8 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
      * Renders our custom "+" button in native key binding entries.
      */
     @Inject(method = "extractContent", at = @At("TAIL"))
-    private void onExtractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks,
+    private void onExtractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered,
+            float deltaTicks,
             CallbackInfo ci) {
         // Mimic the positioning and layout of the existing buttons
         int scrollbarX = this.keyBindsList.getRowRight() + 6 + 2;
@@ -92,6 +95,19 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
 
         this.addKeyBindingButton.setPosition(buttonX, buttonY);
         this.addKeyBindingButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
+    }
+
+    @Inject(method = "lambda$new$2(Lnet/minecraft/client/KeyMapping;Lnet/minecraft/client/gui/screens/options/controls/KeyBindsList;Lnet/minecraft/client/gui/components/Button;)V", at = @At("HEAD"))
+    private static void onResetButtonClicked(KeyMapping keyBinding, KeyBindsList listWidget, Button buttonWidget,
+            CallbackInfo callbackInfo) {
+        ModifierManager.setModifiers(keyBinding.getName(), List.of());
+    }
+
+    @Inject(method = "lambda$new$0(Lnet/minecraft/client/gui/screens/options/controls/KeyBindsList;Lnet/minecraft/client/KeyMapping;Lnet/minecraft/client/gui/components/Button;)V", at = @At("HEAD"))
+    private static void onEditButtonClicked(KeyBindsList listWidget, KeyMapping keyBinding, Button buttonWidget,
+            CallbackInfo callbackInfo) {
+        ModifierManager.setModifiers(keyBinding.getName(), List.of());
+        keyBinding.setKey(InputConstants.UNKNOWN);
     }
 
     /**

@@ -6,20 +6,30 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.StickyMultiKeyBinding;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.util.Collection;
+import java.util.List;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
 
 @Mixin(KeyMapping.class)
 public abstract class KeyMappingMixin {
     @Shadow
     public abstract String getName();
+
+    @Inject(method = "getTranslatedKeyMessage", at = @At("TAIL"))
+    public void getLocalizedName(CallbackInfoReturnable<Component> callbackInfoReturnable) {
+        InputConstants.Key key = ((KeyMappingAccessor) this).getBoundKey();
+        callbackInfoReturnable.setReturnValue(ModifierManager.getDisplayName(this.getName(), key.getDisplayName()));
+    }
 
     /**
      * This covers mocking functionality in "on-demand" actions, where an
@@ -29,7 +39,9 @@ public abstract class KeyMappingMixin {
     private static void onClick(InputConstants.Key key, CallbackInfo ci) {
         Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(key);
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-            multiKeyBinding.incrementTimesPressed();
+            if (ModifierManager.areModifiersActive(multiKeyBinding.getId().toString())) {
+                multiKeyBinding.incrementTimesPressed();
+            }
         }
     }
 
@@ -41,7 +53,11 @@ public abstract class KeyMappingMixin {
     private static void onSet(InputConstants.Key key, boolean pressed, CallbackInfo ci) {
         Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(key);
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-            multiKeyBinding.setPressed(pressed);
+            if (!pressed) {
+                multiKeyBinding.setPressed(false);
+            } else if (ModifierManager.areModifiersActive(multiKeyBinding.getId().toString())) {
+                multiKeyBinding.setPressed(true);
+            }
         }
     }
 
@@ -51,8 +67,10 @@ public abstract class KeyMappingMixin {
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             if (multiKeyBinding.getKey().getType() == InputConstants.Type.KEYSYM
                     && multiKeyBinding.getKey().getValue() != InputConstants.UNKNOWN.getValue()) {
-                multiKeyBinding.setPressed(InputConstants.isKeyDown(Minecraft.getInstance().getWindow(),
-                        multiKeyBinding.getKey().getValue()));
+                boolean keyDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow(),
+                        multiKeyBinding.getKey().getValue());
+                multiKeyBinding
+                        .setPressed(keyDown && ModifierManager.areModifiersActive(multiKeyBinding.getId().toString()));
             }
         }
     }
@@ -71,8 +89,8 @@ public abstract class KeyMappingMixin {
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             if (multiKeyBinding instanceof StickyMultiKeyBinding stickyMultiKeyBinding) {
                 if (stickyMultiKeyBinding.shouldRestoreStateOnScreenClosed()) {
-               stickyMultiKeyBinding.setPressed(true);
-            }
+                    stickyMultiKeyBinding.setPressed(true);
+                }
             }
         }
     }
@@ -89,13 +107,23 @@ public abstract class KeyMappingMixin {
 
     @Inject(method = "isDown", at = @At("HEAD"), cancellable = true)
     private void onIsDown(CallbackInfoReturnable<Boolean> cir) {
+        // Check sub-bindings.
         Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getName());
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-            if (multiKeyBinding.getPressed()) {
+            if (multiKeyBinding.getPressed()
+                    && ModifierManager.areModifiersActive(multiKeyBinding.getId().toString())) {
                 cir.setReturnValue(true);
                 cir.cancel();
                 return;
             }
+        }
+
+        // Suppress vanilla isDown when primary modifiers are required but not held.
+        List<InputConstants.Key> primaryModifiers = ModifierManager.getModifiers(this.getName());
+        if (!primaryModifiers.isEmpty() && !ModifierManager.areModifiersActive(primaryModifiers)) {
+            cir.setReturnValue(false);
+            cir.cancel();
+            return;
         }
     }
 
@@ -122,31 +150,57 @@ public abstract class KeyMappingMixin {
 
     @Inject(method = "matches", at = @At("HEAD"), cancellable = true)
     private void onMatchesKey(KeyEvent keyEvent, CallbackInfoReturnable<Boolean> cir) {
+        // Check sub-bindings.
         Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getName());
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             InputConstants.Key multiKey = multiKeyBinding.getKey();
-            boolean matches = keyEvent.key() == InputConstants.UNKNOWN.getValue()
+            boolean keyMatches = keyEvent.key() == InputConstants.UNKNOWN.getValue()
                     ? multiKey.getType() == InputConstants.Type.SCANCODE && multiKey.getValue() == keyEvent.scancode()
                     : multiKey.getType() == InputConstants.Type.KEYSYM && multiKey.getValue() == keyEvent.key();
-            if (matches) {
+            if (keyMatches && ModifierManager.areModifiersActive(multiKeyBinding.getId().toString())) {
                 cir.setReturnValue(true);
                 cir.cancel();
                 return;
             }
         }
+
+        // If this vanilla binding has primary modifiers, gate the vanilla match on
+        // them.
+        List<InputConstants.Key> primaryModifiers = ModifierManager.getModifiers(this.getName());
+        if (!primaryModifiers.isEmpty()) {
+            if (!ModifierManager.areModifiersActive(primaryModifiers)) {
+                cir.setReturnValue(false);
+                cir.cancel();
+            }
+            // Modifiers are held — let vanilla check the key normally.
+            return;
+        }
     }
 
     @Inject(method = "matchesMouse", at = @At("HEAD"), cancellable = true)
     private void onMatchesMouse(MouseButtonEvent mouseButtonEvent, CallbackInfoReturnable<Boolean> cir) {
+        // Check sub-bindings.
         Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getName());
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             InputConstants.Key multiKey = multiKeyBinding.getKey();
-            boolean matches = multiKey.getType() == InputConstants.Type.MOUSE && multiKey.getValue() == mouseButtonEvent.button();
-            if (matches) {
+            boolean matches = multiKey.getType() == InputConstants.Type.MOUSE
+                    && multiKey.getValue() == mouseButtonEvent.button();
+            if (matches && ModifierManager.areModifiersActive(multiKeyBinding.getId().toString())) {
                 cir.setReturnValue(true);
                 cir.cancel();
                 return;
             }
+        }
+
+        // If this vanilla binding has primary modifiers, gate the vanilla match on
+        // them.
+        List<InputConstants.Key> primaryModifiers = ModifierManager.getModifiers(this.getName());
+        if (!primaryModifiers.isEmpty()) {
+            if (!ModifierManager.areModifiersActive(primaryModifiers)) {
+                cir.setReturnValue(false);
+                cir.cancel();
+            }
+            return;
         }
     }
 }

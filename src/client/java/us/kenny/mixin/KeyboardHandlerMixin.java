@@ -1,0 +1,31 @@
+package us.kenny.mixin;
+
+import org.objectweb.asm.Opcodes;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import net.minecraft.client.KeyboardHandler;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.util.Util;
+import us.kenny.core.MultiKeyBindingScreen;
+
+@Mixin(KeyboardHandler.class)
+public class KeyboardHandlerMixin {
+    @Inject(method = "keyPress", at = @At(value = "FIELD", target = "Lnet/minecraft/client/KeyboardHandler;debugCrashKeyTime:J", ordinal = 0, opcode = Opcodes.GETFIELD))
+    private void onKey(
+            long window,
+            int action,
+            KeyEvent keyEvent,
+            CallbackInfo callbackInfo) {
+        if (action == 0 && Minecraft.getInstance().screen instanceof MultiKeyBindingScreen screen) {
+            if (screen.getSelectedKey() != null || screen.getSelectedMultiKeyBinding() != null) {
+                screen.setSelectedKey(null);
+                screen.setSelectedMultiKeyBinding(null);
+                screen.setLastKeySelection(Util.getMillis());
+            }
+        }
+    }
+}

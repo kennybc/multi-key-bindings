@@ -58,7 +58,8 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
                 key.getName(),
                 key.getCategory(),
                 InputConstants.UNKNOWN);
-        MultiKeyBindingEntry multiKeyBindingEntry = new ControllingMultiKeyBindingEntry(newKeyBindsList, (KeyEntry) (Object) this,
+        MultiKeyBindingEntry multiKeyBindingEntry = new ControllingMultiKeyBindingEntry(newKeyBindsList,
+                (KeyEntry) (Object) this,
                 multiKeyBinding);
 
         List<KeyBindsList.Entry> entries = new ArrayList<>(newKeyBindsList.children());
@@ -80,7 +81,8 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
      * @see us.kenny.mixin.KeyBindsListEntryMixin#onInit
      */
     @Inject(method = "<init>", at = @At("TAIL"))
-    private void onInit(NewKeyBindsList newKeyBindsList, KeyMapping keyBinding, Component bindingName, CallbackInfo ci) {
+    private void onInit(NewKeyBindsList newKeyBindsList, KeyMapping keyBinding, Component bindingName,
+            CallbackInfo ci) {
         this.hidden = false;
         this.newKeyBindsList = newKeyBindsList;
 
@@ -96,7 +98,8 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
      * @see us.kenny.mixin.KeyBindsListEntryMixin#onRenderContent
      */
     @Inject(method = "extractContent", at = @At("HEAD"))
-    private void onExtractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks, CallbackInfo ci) {
+    private void onExtractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered,
+            float deltaTicks, CallbackInfo ci) {
         int scrollbarX = newKeyBindsList.getRowRight() + 6 + 2;
         int buttonX = scrollbarX - 165;
         int buttonY = this.getContentY() - 2;

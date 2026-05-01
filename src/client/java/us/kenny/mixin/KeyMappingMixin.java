@@ -25,12 +25,6 @@ public abstract class KeyMappingMixin {
     @Shadow
     public abstract String getName();
 
-    @Inject(method = "getTranslatedKeyMessage", at = @At("TAIL"))
-    public void getLocalizedName(CallbackInfoReturnable<Component> callbackInfoReturnable) {
-        InputConstants.Key key = ((KeyMappingAccessor) this).getBoundKey();
-        callbackInfoReturnable.setReturnValue(ModifierManager.getDisplayName(this.getName(), key.getDisplayName()));
-    }
-
     /**
      * This covers mocking functionality in "on-demand" actions, where an
      * event is triggered by the single press of a key.
@@ -148,6 +142,22 @@ public abstract class KeyMappingMixin {
         }
     }
 
+    @Inject(method = "same", at = @At("HEAD"), cancellable = true)
+    private void onSame(KeyMapping other, CallbackInfoReturnable<Boolean> cir) {
+        if (!ModifierManager.modifiersEqual(
+                ModifierManager.getModifiers(this.getName()),
+                ModifierManager.getModifiers(other.getName()))) {
+            cir.setReturnValue(false);
+        }
+    }
+
+    @Inject(method = "isUnbound", at = @At("RETURN"), cancellable = true)
+    private void onIsUnbound(CallbackInfoReturnable<Boolean> cir) {
+        if (cir.getReturnValueZ() && !ModifierManager.getModifiers(this.getName()).isEmpty()) {
+            cir.setReturnValue(false);
+        }
+    }
+
     @Inject(method = "matches", at = @At("HEAD"), cancellable = true)
     private void onMatchesKey(KeyEvent keyEvent, CallbackInfoReturnable<Boolean> cir) {
         // Check sub-bindings.
@@ -201,6 +211,19 @@ public abstract class KeyMappingMixin {
                 cir.cancel();
             }
             return;
+        }
+    }
+
+    @Inject(method = "getTranslatedKeyMessage", at = @At("TAIL"), cancellable = true)
+    public void getLocalizedName(CallbackInfoReturnable<Component> cir) {
+        InputConstants.Key key = ((KeyMappingAccessor) this).getBoundKey();
+        cir.setReturnValue(ModifierManager.getDisplayName(this.getName(), key.getDisplayName()));
+    }
+
+    @Inject(method = "isDefault", at = @At("RETURN"), cancellable = true)
+    private void onIsDefault(CallbackInfoReturnable<Boolean> cir) {
+        if (cir.getReturnValueZ() && !ModifierManager.getModifiers(this.getName()).isEmpty()) {
+            cir.setReturnValue(false);
         }
     }
 }

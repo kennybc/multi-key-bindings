@@ -21,6 +21,8 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
@@ -95,7 +97,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     }
 
     /**
-     * @see us.kenny.mixin.KeyBindsListEntryMixin#onRenderContent
+     * @see us.kenny.mixin.KeyBindsListEntryMixin#onExtractContent
      */
     @Inject(method = "extractContent", at = @At("HEAD"))
     private void onExtractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered,
@@ -134,6 +136,19 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
         button.active = !this.hidden;
 
         original.call(button, graphics, mouseX, mouseY, delta);
+    }
+
+    @Inject(method = "lambda$new$2(Lcom/blamejared/controlling/client/NewKeyBindsList;Lnet/minecraft/client/KeyMapping;Lnet/minecraft/client/gui/components/Button;)V", at = @At("HEAD"), remap = false)
+    private static void onResetButtonClicked(NewKeyBindsList listWidget, KeyMapping keyBinding, Button buttonWidget,
+            CallbackInfo callbackInfo) {
+        ModifierManager.setModifiers(keyBinding.getName(), List.of());
+    }
+
+    @Inject(method = "lambda$new$0(Lcom/blamejared/controlling/client/NewKeyBindsList;Lnet/minecraft/client/KeyMapping;Lnet/minecraft/client/gui/components/Button;)V", at = @At("HEAD"), remap = false)
+    private static void onEditButtonClicked(NewKeyBindsList listWidget, KeyMapping keyBinding, Button buttonWidget,
+            CallbackInfo callbackInfo) {
+        ModifierManager.setModifiers(keyBinding.getName(), List.of());
+        keyBinding.setKey(InputConstants.UNKNOWN);
     }
 
     /**

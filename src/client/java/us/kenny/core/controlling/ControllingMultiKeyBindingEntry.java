@@ -15,7 +15,8 @@ import us.kenny.mixin.KeyBindsListAccessor;
 public class ControllingMultiKeyBindingEntry extends MultiKeyBindingEntry {
     private final NewKeyBindsList.KeyEntry parentEntry;
 
-    public ControllingMultiKeyBindingEntry(final CustomList parentList, NewKeyBindsList.KeyEntry parentEntry, final MultiKeyBinding multiKeyBinding) {
+    public ControllingMultiKeyBindingEntry(final CustomList parentList, NewKeyBindsList.KeyEntry parentEntry,
+            final MultiKeyBinding multiKeyBinding) {
         super(parentList, multiKeyBinding);
 
         this.parentEntry = parentEntry;

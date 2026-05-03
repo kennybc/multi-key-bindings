@@ -1,15 +1,21 @@
 # Multi Key Bindings
+
 [**Github**](https://github.com/kennybc/multi-key-bindings) • [**Modrinth**](https://modrinth.com/mod/multi-key-bindings) • [**CurseForge**](https://www.curseforge.com/minecraft/mc-mods/multi-key-bindings)
 
-**Allows players to create multiple keybindings for the same action/function.**
+**Allows players to create multiple keybindings for the same action/function and add modifiers to their binds.**
 
 This mod adds extra functionality to the native key binds screen. Simply click the "+" button next to any key binding and a new binding for the selected action should appear.
+This mod also adds support for modifier keys (left/right) shift, control, and alt.
 
-![Keybinds Settings](https://cdn.modrinth.com/data/cached_images/3cf21f79c42ea4c4bfaa9e1083925266d6c8849b_0.webp)
+![Keybinds Settings](https://cdn.modrinth.com/data/cached_images/e3d7d62a98d18806013a5b2bafb91f62f008a291_0.webp)
 
 ## Versions and Compatibility
 
 Created for Minecraft versions 1.20.x, 1.21.x, and 26.1.x
+
+<br>
+
+> _As of MKB version 1.3.0, there is support for key bind modifiers (e.g. Shift+K)._
 
 <br>
 

@@ -1,6 +1,9 @@
 package us.kenny.core;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.network.chat.Component;
+import us.kenny.ModifierManager;
+
 import java.util.UUID;
 import net.minecraft.client.KeyMapping.Category;
 
@@ -25,14 +28,19 @@ public class MultiKeyBinding {
         this.key = key;
     }
 
+    public boolean isUnbound() {
+        return this.key.equals(InputConstants.UNKNOWN);
+    }
+
     public void release() {
         this.timesPressed = 0;
         this.setPressed(false);
     }
 
     public boolean shouldSetOnIngameFocus() {
-      return this.key.getType() == InputConstants.Type.KEYSYM && this.key.getValue() != InputConstants.UNKNOWN.getValue();
-   }
+        return this.key.getType() == InputConstants.Type.KEYSYM
+                && this.key.getValue() != InputConstants.UNKNOWN.getValue();
+    }
 
     public UUID getId() {
         return this.id;
@@ -56,6 +64,10 @@ public class MultiKeyBinding {
 
     public void setKey(InputConstants.Key key) {
         this.key = key;
+    }
+
+    public Component getDisplayName() {
+        return ModifierManager.getDisplayName(this.id.toString(), this.key.getDisplayName());
     }
 
     public int getTimesPressed() {

@@ -1,21 +1,22 @@
 package us.kenny.mixin;
 
-import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.util.Util;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import us.kenny.MultiKeyBindingManager;
+
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingScreen;
+import us.kenny.core.MultiKeyBindingScreenHelper;
 
 @Mixin(KeyBindsScreen.class)
 public abstract class KeyBindsScreenMixin implements MultiKeyBindingScreen {
@@ -23,9 +24,17 @@ public abstract class KeyBindsScreenMixin implements MultiKeyBindingScreen {
     public long lastKeySelection;
     @Shadow
     private KeyBindsList keyBindsList;
+    @Mutable
+    @Shadow
+    private KeyMapping selectedKey;
 
     @Unique
     private MultiKeyBinding selectedMultiKeyBinding;
+
+    @Unique
+    public KeyMapping getSelectedKey() {
+        return this.selectedKey;
+    }
 
     @Unique
     public MultiKeyBinding getSelectedMultiKeyBinding() {
@@ -33,8 +42,18 @@ public abstract class KeyBindsScreenMixin implements MultiKeyBindingScreen {
     }
 
     @Unique
+    public void setSelectedKey(KeyMapping keyMapping) {
+        this.selectedKey = keyMapping;
+    }
+
+    @Unique
     public void setSelectedMultiKeyBinding(MultiKeyBinding multiKeyBinding) {
         this.selectedMultiKeyBinding = multiKeyBinding;
+    }
+
+    @Unique
+    public void setLastKeySelection(long time) {
+        this.lastKeySelection = time;
     }
 
     /**
@@ -42,14 +61,9 @@ public abstract class KeyBindsScreenMixin implements MultiKeyBindingScreen {
      * Updates selected custom key binding with whatever mouse button was pressed.
      */
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-    private void onMouseClicked(MouseButtonEvent mouseButtonEvent, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
-        if (this.selectedMultiKeyBinding != null) {
-            MultiKeyBindingManager.setKeyBinding(this.selectedMultiKeyBinding,
-                    InputConstants.Type.MOUSE.getOrCreate(mouseButtonEvent.button()));
-            this.selectedMultiKeyBinding = null;
-            this.keyBindsList.resetMappingAndUpdateButtons();
+    public void onMouseClicked(MouseButtonEvent mouseButtonEvent, boolean bl, CallbackInfoReturnable<Boolean> cir) {
+        if (MultiKeyBindingScreenHelper.handleMouseClicked(this, this.keyBindsList, mouseButtonEvent)) {
             cir.setReturnValue(true);
-            cir.cancel();
         }
     }
 
@@ -59,20 +73,8 @@ public abstract class KeyBindsScreenMixin implements MultiKeyBindingScreen {
      */
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     public void onKeyPressed(KeyEvent keyEvent, CallbackInfoReturnable<Boolean> cir) {
-        if (this.selectedMultiKeyBinding != null) {
-            if (keyEvent.isEscape()) {
-                MultiKeyBindingManager.setKeyBinding(this.selectedMultiKeyBinding,
-                        InputConstants.UNKNOWN);
-            } else {
-                MultiKeyBindingManager.setKeyBinding(this.selectedMultiKeyBinding,
-                        InputConstants.getKey(keyEvent));
-            }
-
-            this.selectedMultiKeyBinding = null;
-            this.lastKeySelection = Util.getMillis();
-            this.keyBindsList.resetMappingAndUpdateButtons();
+        if (MultiKeyBindingScreenHelper.handleKeyPressed(this, this.keyBindsList, keyEvent)) {
             cir.setReturnValue(true);
-            cir.cancel();
         }
     }
 }

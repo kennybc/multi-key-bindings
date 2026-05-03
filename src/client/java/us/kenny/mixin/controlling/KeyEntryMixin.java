@@ -5,6 +5,7 @@ import com.blamejared.controlling.client.NewKeyBindsList.KeyEntry;
 import com.google.common.collect.ImmutableList;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import net.minecraft.client.KeyMapping;
@@ -14,6 +15,9 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+
+import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -43,6 +47,8 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     @Final
     @Shadow
     private Button btnResetKeyBinding;
+    @Shadow
+    private boolean hasCollision;
 
     @Unique
     private boolean hidden;
@@ -52,7 +58,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     private NewKeyBindsList newKeyBindsList;
 
     /**
-     * @see us.kenny.mixin.KeyBindingEntryMixin#createCustomKeyBinding
+     * @see us.kenny.mixin.KeyBindsListEntryMixin#createCustomKeyBinding
      */
     @Unique
     private void createCustomKeyBinding() {
@@ -136,6 +142,31 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
         button.active = !this.hidden;
 
         original.call(button, graphics, mouseX, mouseY, delta);
+    }
+
+    /**
+     * @see us.kenny.mixin.KeyBindsListEntryMixin#onGetHasCollision
+     */
+    @Inject(method = "refreshEntry", at = @At(value = "FIELD", target = "Lcom/blamejared/controlling/client/NewKeyBindsList$KeyEntry;hasCollision:Z", ordinal = 1, opcode = Opcodes.GETFIELD))
+    private void onGetHasCollision(CallbackInfo ci, @Local(ordinal = 0) MutableComponent collisions) {
+        if (this.key.isUnbound()) {
+            return;
+        }
+        String boundKeyName = this.key.saveString();
+        List<InputConstants.Key> keyModifiers = ModifierManager.getModifiers(this.key.getName());
+        for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
+            if (mkb.isUnbound()
+                    || !mkb.getKey().getName().equals(boundKeyName)
+                    || !ModifierManager.modifiersEqual(keyModifiers,
+                            ModifierManager.getModifiers(mkb.getId().toString()))) {
+                continue;
+            }
+            if (this.hasCollision) {
+                collisions.append(", ");
+            }
+            this.hasCollision = true;
+            collisions.append(Component.translatable(mkb.getAction().replaceFirst("^multi.", "")));
+        }
     }
 
     /**

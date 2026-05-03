@@ -1,7 +1,10 @@
 package us.kenny.mixin;
 
 import com.google.common.collect.ImmutableList;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.platform.InputConstants;
+
+import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -25,6 +28,7 @@ import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList.KeyEntry;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 @Mixin(KeyBindsList.KeyEntry.class)
 public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
@@ -37,6 +41,8 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
     @Final
     @Shadow
     private Button resetButton;
+    @Shadow
+    private boolean hasCollision;
 
     @Unique
     private Button addKeyBindingButton;
@@ -95,6 +101,31 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
 
         this.addKeyBindingButton.setPosition(buttonX, buttonY);
         this.addKeyBindingButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
+    }
+
+    /**
+     * Check primary (vanilla) key bindings against custom ones for collisions.
+     */
+    @Inject(method = "refreshEntry", at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/screens/options/controls/KeyBindsList$KeyEntry;hasCollision:Z", ordinal = 1, opcode = Opcodes.GETFIELD))
+    private void onGetHasCollision(CallbackInfo ci, @Local MutableComponent collisions) {
+        if (this.key.isUnbound()) {
+            return;
+        }
+        String boundKeyName = this.key.saveString();
+        List<InputConstants.Key> keyModifiers = ModifierManager.getModifiers(this.key.getName());
+        for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
+            if (mkb.isUnbound()
+                    || !mkb.getKey().getName().equals(boundKeyName)
+                    || !ModifierManager.modifiersEqual(keyModifiers,
+                            ModifierManager.getModifiers(mkb.getId().toString()))) {
+                continue;
+            }
+            if (this.hasCollision) {
+                collisions.append(", ");
+            }
+            this.hasCollision = true;
+            collisions.append(Component.translatable(mkb.getAction().replaceFirst("^multi.", "")));
+        }
     }
 
     /**

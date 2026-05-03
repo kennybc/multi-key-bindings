@@ -3,11 +3,14 @@
   "package": "us.kenny.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "AbstractButtonMixin",
     "KeyBindsListAccessor",
     "KeyBindsListEntryAccessor",
+    "KeyMappingAccessor",
     "KeyBindsListEntryMixin",
     "KeyBindsListMixin",
     "KeyBindsScreenMixin",
+    "KeyboardHandlerMixin",
     "KeyMappingMixin",
     "OptionsMixin"
   ],

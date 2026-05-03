@@ -18,4 +18,9 @@ public class OptionsMixin {
         MultiKeyBindingManager.setGameOptions((Options) (Object) this);
         ConfigManager.loadConfigFile();
     }
+
+    @Inject(method = "save", at = @At("RETURN"))
+    public void onSave(CallbackInfo callbackInfo) {
+        ConfigManager.saveConfigFile();
+    }
 }

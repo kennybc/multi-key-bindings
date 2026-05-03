@@ -19,15 +19,16 @@ public class MultiKeyBindingManager {
     private static final Map<String, List<MultiKeyBinding>> ACTION_TO_BINDINGS = new HashMap<>();
     private static final Map<InputConstants.Key, List<MultiKeyBinding>> KEY_TO_BINDINGS = new HashMap<>();
     private static final Map<UUID, MultiKeyBinding> ID_TO_BINDING = new HashMap<>();
-    
-    private record StickySpec(BooleanSupplier toggleSupplier, boolean shouldRestore) {}
+
+    private record StickySpec(BooleanSupplier toggleSupplier, boolean shouldRestore) {
+    }
+
     private static Map<String, StickySpec> stickySpecs() {
         return Map.of(
-            "multi.key.sneak",  new StickySpec(gameOptions.toggleCrouch()::get, true),
-            "multi.key.sprint", new StickySpec(gameOptions.toggleSprint()::get, true),
-            "multi.key.use",    new StickySpec(gameOptions.toggleUse()::get, false),
-            "multi.key.attack", new StickySpec(gameOptions.toggleAttack()::get, true)
-        );
+                "multi.key.sneak", new StickySpec(gameOptions.toggleCrouch()::get, true),
+                "multi.key.sprint", new StickySpec(gameOptions.toggleSprint()::get, true),
+                "multi.key.use", new StickySpec(gameOptions.toggleUse()::get, false),
+                "multi.key.attack", new StickySpec(gameOptions.toggleAttack()::get, true));
     }
 
     public static Options getGameOptions() {
@@ -39,18 +40,12 @@ public class MultiKeyBindingManager {
     }
 
     /**
-     * Create a new key binding and save it to the config file. (Prefixes the action
-     * with "multi."")
+     * Create a new key binding (prefixes the action with "multi.").
      *
      * @see MultiKeyBindingManager#addKeyBinding(String, Category, String, UUID)
      */
     public static MultiKeyBinding addKeyBinding(String action, Category category, InputConstants.Key key) {
-        UUID newId = UUID.randomUUID();
-        MultiKeyBinding multiKeyBinding = addKeyBinding("multi." + action, category, key.getName(), newId);
-
-        ConfigManager.saveConfigFile();
-
-        return multiKeyBinding;
+        return addKeyBinding("multi." + action, category, key.getName(), UUID.randomUUID());
     }
 
     /**
@@ -69,13 +64,12 @@ public class MultiKeyBindingManager {
         StickySpec spec = stickySpecs().get(action);
         if (spec != null) {
             multiKeyBinding = new StickyMultiKeyBinding(
-                newId,
-                action,
-                category,
-                key,
-                spec.toggleSupplier(),
-                spec.shouldRestore()
-            );
+                    newId,
+                    action,
+                    category,
+                    key,
+                    spec.toggleSupplier(),
+                    spec.shouldRestore());
         } else {
             multiKeyBinding = new MultiKeyBinding(newId, action, category, key);
         }
@@ -120,16 +114,14 @@ public class MultiKeyBindingManager {
             return;
 
         InputConstants.Key oldKey = multiKeyBinding.getKey();
-        if (oldKey == newKey)
-            return;
-
         multiKeyBinding.setKey(newKey);
-        KEY_TO_BINDINGS.computeIfPresent(oldKey, (k, v) -> {
-            v.remove(multiKeyBinding);
-            return v;
-        });
-        KEY_TO_BINDINGS.computeIfAbsent(newKey, k -> new ArrayList<MultiKeyBinding>()).add(multiKeyBinding);
-        ConfigManager.saveConfigFile();
+        if (!oldKey.equals(newKey)) {
+            KEY_TO_BINDINGS.computeIfPresent(oldKey, (k, v) -> {
+                v.remove(multiKeyBinding);
+                return v;
+            });
+            KEY_TO_BINDINGS.computeIfAbsent(newKey, k -> new ArrayList<MultiKeyBinding>()).add(multiKeyBinding);
+        }
     }
 
     /**
@@ -141,6 +133,7 @@ public class MultiKeyBindingManager {
         if (multiKeyBinding == null)
             return;
 
+        ModifierManager.setModifiers(multiKeyBinding.getId().toString(), List.of());
         ID_TO_BINDING.remove(multiKeyBinding.getId());
         ACTION_TO_BINDINGS.computeIfPresent(multiKeyBinding.getAction(), (k, v) -> {
             v.remove(multiKeyBinding);
@@ -150,6 +143,5 @@ public class MultiKeyBindingManager {
             v.remove(multiKeyBinding);
             return v;
         });
-        ConfigManager.saveConfigFile();
     }
 }

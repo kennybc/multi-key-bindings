@@ -3,6 +3,7 @@ package us.kenny.core;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Unique;
+import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.mixin.KeyBindsListAccessor;
 
@@ -39,6 +40,8 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
         this.editButton = Button
                 .builder(Component.nullToEmpty(multiKeyBinding.getAction()), button -> {
                     this.parentScreen.setSelectedMultiKeyBinding(multiKeyBinding);
+                    multiKeyBinding.setKey(InputConstants.UNKNOWN);
+                    ModifierManager.setModifiers(multiKeyBinding.getId().toString(), List.of());
                     this.parentList.resetMappingAndUpdateButtons();
                 })
                 .size(75, 20)
@@ -47,6 +50,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
         this.resetButton = Button
                 .builder(Component.translatable("controls.reset"), button -> {
                     multiKeyBinding.setKey(InputConstants.UNKNOWN);
+                    ModifierManager.setModifiers(multiKeyBinding.getId().toString(), List.of());
                     this.parentList.resetMappingAndUpdateButtons();
                 })
                 .size(50, 20)
@@ -79,7 +83,8 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
      * Renders our custom entry in the list of key bindings.
      */
     @Override
-    public void extractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks) {
+    public void extractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered,
+            float deltaTicks) {
         // Render buttons
         int scrollbarX = this.parentList.getRowRight() + 6 + 2;
         int contentX = this.getContentX();
@@ -97,6 +102,11 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
         int removeKeyBindingButtonX = editButtonX - this.removeKeyBindingButton.getWidth() - 5;
         this.removeKeyBindingButton.setPosition(removeKeyBindingButtonX, buttonY);
         this.removeKeyBindingButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
+
+        if (this.duplicate) {
+            int stripeLeft = this.editButton.getX() - 6;
+            graphics.fill(stripeLeft, this.getContentY() - 1, stripeLeft + 3, this.getContentBottom(), -256);
+        }
 
         // Render an arrow instead of action name
         int leftOffset = 10;
@@ -124,15 +134,19 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
      */
     @Override
     public void refreshEntry() {
-        this.editButton.setMessage(this.multiKeyBinding.getKey().getDisplayName());
+        this.editButton.setMessage(this.multiKeyBinding.getDisplayName());
         this.resetButton.active = !this.multiKeyBinding.getKey().equals(InputConstants.UNKNOWN);
         this.duplicate = false;
 
         MutableComponent duplicates = Component.empty();
         if (!this.multiKeyBinding.getKey().equals(InputConstants.UNKNOWN)) {
+            List<InputConstants.Key> modifiers = ModifierManager.getModifiers(this.multiKeyBinding.getId().toString());
+            String selfKeyName = this.multiKeyBinding.getKey().getName();
+
             for (KeyMapping kb : MultiKeyBindingManager.getGameOptions().keyMappings) {
-                if (!kb.isUnbound() && kb.saveString()
-                        .equals(this.multiKeyBinding.getKey().getName())) {
+                if (!kb.isUnbound() && kb.saveString().equals(selfKeyName)
+                        && ModifierManager.modifiersEqual(modifiers,
+                                ModifierManager.getModifiers(kb.getName()))) {
                     if (this.duplicate) {
                         duplicates.append(", ");
                     }
@@ -143,9 +157,11 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
             }
 
             for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
-                if (!mkb.getId().equals(this.multiKeyBinding.getId()) && !mkb.getKey().equals(InputConstants.UNKNOWN) &&
-                        mkb.getKey().getName()
-                                .equals(this.multiKeyBinding.getKey().getName())) {
+                if (!mkb.getId().equals(this.multiKeyBinding.getId())
+                        && !mkb.getKey().equals(InputConstants.UNKNOWN)
+                        && mkb.getKey().getName().equals(selfKeyName)
+                        && ModifierManager.modifiersEqual(modifiers,
+                                ModifierManager.getModifiers(mkb.getId().toString()))) {
                     if (this.duplicate) {
                         duplicates.append(", ");
                     }
@@ -157,8 +173,11 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
         }
 
         if (this.duplicate) {
-            this.editButton.setMessage(Component.literal("[ ").append(this.editButton.getMessage().copy().withStyle(ChatFormatting.WHITE)).append(" ]").withStyle(ChatFormatting.YELLOW));
-            this.editButton.setTooltip(Tooltip.create(Component.translatable("controls.keybinds.duplicateKeybinds", new Object[]{duplicates})));
+            this.editButton.setMessage(
+                    Component.literal("[ ").append(this.editButton.getMessage().copy().withStyle(ChatFormatting.WHITE))
+                            .append(" ]").withStyle(ChatFormatting.YELLOW));
+            this.editButton.setTooltip(Tooltip.create(
+                    Component.translatable("controls.keybinds.duplicateKeybinds", new Object[] { duplicates })));
         } else {
             this.editButton.setTooltip(null);
         }
@@ -168,8 +187,9 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
                     .setMessage(
                             Component.literal("> ")
                                     .append(this.editButton.getMessage().copy()
-                                            .withStyle(new ChatFormatting[]{ChatFormatting.WHITE, ChatFormatting.UNDERLINE}))
-                                            .append(" <").withStyle(ChatFormatting.YELLOW));
+                                            .withStyle(new ChatFormatting[] { ChatFormatting.WHITE,
+                                                    ChatFormatting.UNDERLINE }))
+                                    .append(" <").withStyle(ChatFormatting.YELLOW));
         }
     }
 

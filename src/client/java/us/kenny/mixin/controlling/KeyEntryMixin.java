@@ -5,6 +5,7 @@ import com.blamejared.controlling.client.NewKeyBindsList.KeyEntry;
 import com.google.common.collect.ImmutableList;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import net.minecraft.client.KeyMapping;
@@ -14,6 +15,9 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+
+import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -21,6 +25,8 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
@@ -41,6 +47,8 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     @Final
     @Shadow
     private Button btnResetKeyBinding;
+    @Shadow
+    private boolean hasCollision;
 
     @Unique
     private boolean hidden;
@@ -50,7 +58,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     private NewKeyBindsList newKeyBindsList;
 
     /**
-     * @see us.kenny.mixin.KeyBindingEntryMixin#createCustomKeyBinding
+     * @see us.kenny.mixin.KeyBindsListEntryMixin#createCustomKeyBinding
      */
     @Unique
     private void createCustomKeyBinding() {
@@ -58,7 +66,8 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
                 key.getName(),
                 key.getCategory(),
                 InputConstants.UNKNOWN);
-        MultiKeyBindingEntry multiKeyBindingEntry = new ControllingMultiKeyBindingEntry(newKeyBindsList, (KeyEntry) (Object) this,
+        MultiKeyBindingEntry multiKeyBindingEntry = new ControllingMultiKeyBindingEntry(newKeyBindsList,
+                (KeyEntry) (Object) this,
                 multiKeyBinding);
 
         List<KeyBindsList.Entry> entries = new ArrayList<>(newKeyBindsList.children());
@@ -80,7 +89,8 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
      * @see us.kenny.mixin.KeyBindsListEntryMixin#onInit
      */
     @Inject(method = "<init>", at = @At("TAIL"))
-    private void onInit(NewKeyBindsList newKeyBindsList, KeyMapping keyBinding, Component bindingName, CallbackInfo ci) {
+    private void onInit(NewKeyBindsList newKeyBindsList, KeyMapping keyBinding, Component bindingName,
+            CallbackInfo ci) {
         this.hidden = false;
         this.newKeyBindsList = newKeyBindsList;
 
@@ -93,10 +103,11 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     }
 
     /**
-     * @see us.kenny.mixin.KeyBindsListEntryMixin#onRenderContent
+     * @see us.kenny.mixin.KeyBindsListEntryMixin#onExtractContent
      */
     @Inject(method = "extractContent", at = @At("HEAD"))
-    private void onExtractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float deltaTicks, CallbackInfo ci) {
+    private void onExtractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered,
+            float deltaTicks, CallbackInfo ci) {
         int scrollbarX = newKeyBindsList.getRowRight() + 6 + 2;
         int buttonX = scrollbarX - 165;
         int buttonY = this.getContentY() - 2;
@@ -131,6 +142,51 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
         button.active = !this.hidden;
 
         original.call(button, graphics, mouseX, mouseY, delta);
+    }
+
+    /**
+     * @see us.kenny.mixin.KeyBindsListEntryMixin#onGetHasCollision
+     */
+    @Inject(method = "refreshEntry", at = @At(value = "FIELD", target = "Lcom/blamejared/controlling/client/NewKeyBindsList$KeyEntry;hasCollision:Z", ordinal = 1, opcode = Opcodes.GETFIELD))
+    private void onGetHasCollision(CallbackInfo ci, @Local(ordinal = 0) MutableComponent collisions) {
+        if (this.key.isUnbound()) {
+            return;
+        }
+        String boundKeyName = this.key.saveString();
+        List<InputConstants.Key> keyModifiers = ModifierManager.getModifiers(this.key.getName());
+        for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
+            if (mkb.isUnbound()
+                    || this.key.isDefault()
+                    || !mkb.getKey().getName().equals(boundKeyName)
+                    || !ModifierManager.modifiersEqual(keyModifiers,
+                            ModifierManager.getModifiers(mkb.getId().toString()))) {
+                continue;
+            }
+            if (this.hasCollision) {
+                collisions.append(", ");
+            }
+            this.hasCollision = true;
+            collisions.append(Component.translatable(mkb.getAction().replaceFirst("^multi.", "")));
+        }
+    }
+
+    /**
+     * @see us.kenny.mixin.KeyBindsListEntryMixin#onResetButtonClicked
+     */
+    @Inject(method = "lambda$new$2(Lcom/blamejared/controlling/client/NewKeyBindsList;Lnet/minecraft/client/KeyMapping;Lnet/minecraft/client/gui/components/Button;)V", at = @At("HEAD"), remap = false)
+    private static void onResetButtonClicked(NewKeyBindsList listWidget, KeyMapping keyBinding, Button buttonWidget,
+            CallbackInfo callbackInfo) {
+        ModifierManager.setModifiers(keyBinding.getName(), List.of());
+    }
+
+    /**
+     * @see us.kenny.mixin.KeyBindsListEntryMixin#onEditButtonClicked
+     */
+    @Inject(method = "lambda$new$0(Lcom/blamejared/controlling/client/NewKeyBindsList;Lnet/minecraft/client/KeyMapping;Lnet/minecraft/client/gui/components/Button;)V", at = @At("HEAD"), remap = false)
+    private static void onEditButtonClicked(NewKeyBindsList listWidget, KeyMapping keyBinding, Button buttonWidget,
+            CallbackInfo callbackInfo) {
+        ModifierManager.setModifiers(keyBinding.getName(), List.of());
+        keyBinding.setKey(InputConstants.UNKNOWN);
     }
 
     /**

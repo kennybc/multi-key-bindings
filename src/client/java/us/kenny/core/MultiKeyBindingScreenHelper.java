@@ -48,7 +48,7 @@ public final class MultiKeyBindingScreenHelper {
                     ((KeyMappingAccessor) selectedKey).getBoundKey());
         }
 
-        if (selectedMultiKeyBinding != null && !selectedMultiKeyBinding.isUnbound()) {
+        if (selectedMultiKeyBinding != null) {
             ModifierManager.addModifier(selectedMultiKeyBinding.getId().toString(),
                     selectedMultiKeyBinding.getKey());
             MultiKeyBindingManager.setKeyBinding(selectedMultiKeyBinding, pressedKey);
@@ -78,7 +78,7 @@ public final class MultiKeyBindingScreenHelper {
                 selectedKey.setKey(InputConstants.UNKNOWN);
             }
             if (selectedMultiKeyBinding != null) {
-                selectedMultiKeyBinding.setKey(InputConstants.UNKNOWN);
+                MultiKeyBindingManager.setKeyBinding(selectedMultiKeyBinding, InputConstants.UNKNOWN);
                 ModifierManager.setModifiers(selectedMultiKeyBinding.getId().toString(), List.of());
             }
             return false;

@@ -24,14 +24,14 @@ public class ControllingConstantsMixin {
     /**
      * Tests a custom key binding against the search term.
      *
-     * @param key The search term key: category, key, or name.
+     * @param key             The search term key: category, key, or name.
      * @param multiKeyBinding The custom key binding we are testing.
      */
     @Unique
     private static Optional<String> testMultiKeyBinding(String key, MultiKeyBinding multiKeyBinding) {
         return switch (key) {
             case "category" -> Optional.of(multiKeyBinding.getCategory().label().getString());
-            case "key" -> Optional.of(multiKeyBinding.getKey().getName());
+            case "key" -> Optional.of(multiKeyBinding.getDisplayName().getString());
             case "name" -> Optional.of(
                     Component.translatable(multiKeyBinding.getAction().replaceFirst("^multi.", "")).getString());
             default -> Optional.empty();

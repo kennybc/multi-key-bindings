@@ -48,7 +48,8 @@ public abstract class CustomListMixin {
                     .getKeyBindings(keyBinding.getName());
             for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
                 multiKeyBinding.setCategory(keyBinding.getCategory());
-                MultiKeyBindingEntry multiKeyBindingEntry = new ControllingMultiKeyBindingEntry(self, keyEntry, multiKeyBinding);
+                MultiKeyBindingEntry multiKeyBindingEntry = new ControllingMultiKeyBindingEntry(self, keyEntry,
+                        multiKeyBinding);
                 ((CustomListAccessor) self).invokeAddEntry(multiKeyBindingEntry);
             }
         }

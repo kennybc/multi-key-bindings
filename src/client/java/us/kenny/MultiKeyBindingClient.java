@@ -11,7 +11,7 @@ public class MultiKeyBindingClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-         if (FabricLoader.getInstance().isModLoaded("controlling")) {
+        if (FabricLoader.getInstance().isModLoaded("controlling")) {
             LOGGER.info("Starting multi-key-bindings with controlling plugin!");
         } else {
             LOGGER.info("Starting multi-key-bindings!");

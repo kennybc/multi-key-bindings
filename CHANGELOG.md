@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0 (May 1, 2026)
+
+- Add support for key binding modifiers (shift, ctrl, alt)
+
 ## 1.2.0 (Dec 27, 2025)
 
 - Migrate from yarn to mojang mappings

@@ -13,10 +13,12 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class ConfigManager {
-    public static final int CONFIG_VERSION = 2;
+    public static final int CONFIG_VERSION = 3;
     private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir()
             .resolve("multi-key-bindings.json");
     private static final Gson GSON = new Gson();
@@ -29,11 +31,9 @@ public class ConfigManager {
     public static void saveConfigFile() {
         try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
             JsonObject json = new JsonObject();
-            JsonArray keyBindingsArray = getFormattedKeyBindings();
-
             json.addProperty("config_version", CONFIG_VERSION);
-            json.add("bindings", keyBindingsArray);
-
+            json.add("bindings", getFormattedKeyBindings());
+            json.add("modifiers", getFormattedModifiers());
             GSON.toJson(json, writer);
         } catch (IOException e) {
             MultiKeyBindingClient.LOGGER.error("Failed to save keybindings config", e);
@@ -63,18 +63,27 @@ public class ConfigManager {
                 migrated = true;
             }
 
-            if (!json.has("bindings"))
-                return;
+            // Load modifiers before bindings so MultiKeyBinding constructors see their full
+            // modifier state via ModifierManager.
+            if (json.has("modifiers")) {
+                for (var entry : json.getAsJsonObject("modifiers").entrySet()) {
+                    List<InputConstants.Key> modifiers = parseModifiers(entry.getValue().getAsJsonArray());
+                    if (!modifiers.isEmpty()) {
+                        ModifierManager.setModifiers(entry.getKey(), modifiers);
+                    }
+                }
+            }
 
-            JsonArray keyBindingsArray = json.getAsJsonArray("bindings");
-            for (JsonElement element : keyBindingsArray) {
-                JsonObject keyBindingJson = element.getAsJsonObject();
-                UUID id = UUID.fromString(keyBindingJson.get("id").getAsString());
-                String action = keyBindingJson.get("action").getAsString();
-                String translationKey = keyBindingJson.get("key").getAsString();
+            if (json.has("bindings")) {
+                for (JsonElement element : json.getAsJsonArray("bindings")) {
+                    JsonObject keyBindingJson = element.getAsJsonObject();
+                    UUID id = UUID.fromString(keyBindingJson.get("id").getAsString());
+                    String action = keyBindingJson.get("action").getAsString();
+                    String translationKey = keyBindingJson.get("key").getAsString();
 
-                // Empty category since unknown at startup, it will be filled in late
-                MultiKeyBindingManager.addKeyBinding(action, null, translationKey, id);
+                    // Empty category since unknown at startup, it will be filled in later
+                    MultiKeyBindingManager.addKeyBinding(action, null, translationKey, id);
+                }
             }
 
             if (migrated) {
@@ -93,9 +102,9 @@ public class ConfigManager {
 
     /**
      * Migrate a config JSON object to latest format.
-     * 
+     *
      * @param json    The config to migrate.
-     * @param version The version of the config we are migrating.
+     * @param version The version of the config we are migrating from.
      */
     private static JsonObject migrateConfig(JsonObject json, int version) {
         JsonObject newConfig = new JsonObject();
@@ -112,8 +121,7 @@ public class ConfigManager {
 
             if (version == 1 && oldBinding.has("keyCode")) {
                 int keyCode = oldBinding.get("keyCode").getAsInt();
-                String keyName = convertKeyCodeToKeyName(keyCode);
-                newBinding.addProperty("key", keyName);
+                newBinding.addProperty("key", convertKeyCodeToKeyName(keyCode));
             } else {
                 newBinding.addProperty("key", oldBinding.get("key").getAsString()); // Already v2 format
             }
@@ -122,24 +130,61 @@ public class ConfigManager {
         }
 
         newConfig.add("bindings", newKeyBindings);
+        newConfig.add("modifiers", new JsonObject());
         return newConfig;
     }
 
     /**
-     * Get all key bindings and format them into a JSON object for storage.
+     * Get all custom key bindings formatted as a JSON array for storage.
      */
     private static JsonArray getFormattedKeyBindings() {
-        JsonArray keyBindingsArray = new JsonArray();
-
-        for (MultiKeyBinding multiKeyBinding : MultiKeyBindingManager.getKeyBindings()) {
-            JsonObject keyBindingJson = new JsonObject();
-            keyBindingJson.addProperty("id", multiKeyBinding.getId().toString());
-            keyBindingJson.addProperty("action", multiKeyBinding.getAction());
-            keyBindingJson.addProperty("key", multiKeyBinding.getKey().getName());
-
-            keyBindingsArray.add(keyBindingJson);
+        JsonArray array = new JsonArray();
+        for (MultiKeyBinding binding : MultiKeyBindingManager.getKeyBindings()) {
+            JsonObject obj = new JsonObject();
+            obj.addProperty("id", binding.getId().toString());
+            obj.addProperty("action", binding.getAction());
+            obj.addProperty("key", binding.getKey().getName());
+            array.add(obj);
         }
-        return keyBindingsArray;
+        return array;
+    }
+
+    /**
+     * Get all modifier entries (action name or binding UUID → modifier list) as a
+     * JSON object.
+     */
+    private static JsonObject getFormattedModifiers() {
+        JsonObject obj = new JsonObject();
+        for (var entry : ModifierManager.getAllModifiers().entrySet()) {
+            obj.add(entry.getKey(), serializeModifiers(entry.getValue()));
+        }
+        return obj;
+    }
+
+    /**
+     * Serialize a list of modifier keys into a JsonArray.
+     *
+     * @param modifiers The list of modifier keys to serialize.
+     */
+    private static JsonArray serializeModifiers(List<InputConstants.Key> modifiers) {
+        JsonArray array = new JsonArray();
+        for (InputConstants.Key mod : modifiers) {
+            array.add(mod.getName());
+        }
+        return array;
+    }
+
+    /**
+     * Deserialize a JsonArray into a list of modifier keys.
+     *
+     * @param array The JSON array of key name strings.
+     */
+    private static List<InputConstants.Key> parseModifiers(JsonArray array) {
+        List<InputConstants.Key> modifiers = new ArrayList<>();
+        for (JsonElement el : array) {
+            modifiers.add(InputConstants.getKey(el.getAsString()));
+        }
+        return modifiers;
     }
 
     /**

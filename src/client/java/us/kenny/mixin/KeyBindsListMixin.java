@@ -30,8 +30,8 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
      */
     @WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/options/controls/KeyBindsList;addEntry(Lnet/minecraft/client/gui/components/AbstractSelectionList$Entry;)I", ordinal = 1))
     private int onAddEntry(KeyBindsList instance,
-    AbstractSelectionList.Entry<KeyBindsList.Entry> entry,
-    Operation<Integer> original) {
+            AbstractSelectionList.Entry<KeyBindsList.Entry> entry,
+            Operation<Integer> original) {
         KeyBindsList self = (KeyBindsList) (Object) this;
 
         int lastIndex = original.call(instance, entry);

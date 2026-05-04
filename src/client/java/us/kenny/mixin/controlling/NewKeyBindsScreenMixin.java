@@ -13,10 +13,14 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.*;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import us.kenny.core.MultiKeyBindingEntry;
+import us.kenny.core.MultiKeyBindingScreen;
+import us.kenny.core.MultiKeyBindingScreenHelper;
 import us.kenny.core.controlling.ControllingHideableKeyEntry;
 import us.kenny.core.controlling.ControllingMultiKeyBindingEntry;
 
@@ -28,8 +32,10 @@ import java.util.function.Predicate;
 public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
     @Shadow
     private SortOrder sortOrder;
+
     @Shadow
     public abstract KeyBindsList getKeyBindsList();
+
     @Shadow
     protected abstract CustomList getCustomList();
 
@@ -38,10 +44,34 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
     }
 
     /**
-     * Our custom key bindings cannot be sorted, so we must first remove them before sorting. After sorting, we add them back in place.
+     * @see us.kenny.mixin.KeyBindsScreenMixin#onMouseClicked
+     */
+    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true, remap = false)
+    public void onMouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if (MultiKeyBindingScreenHelper.handleMouseClicked((MultiKeyBindingScreen) this, this.getKeyBindsList(),
+                button)) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    /**
+     * @see us.kenny.mixin.KeyBindsScreenMixin#onKeyPressed
+     */
+    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true, remap = false)
+    public void onKeyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
+        if (MultiKeyBindingScreenHelper.handleKeyPressed((MultiKeyBindingScreen) this, this.getKeyBindsList(),
+                InputConstants.getKey(keyCode, scanCode))) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    /**
+     * Our custom key bindings cannot be sorted, so we must first remove them before
+     * sorting. After sorting, we add them back in place.
      */
     @WrapOperation(method = "Lcom/blamejared/controlling/client/NewKeyBindsScreen;filterKeys(Ljava/lang/String;)V", at = @At(value = "INVOKE", target = "Ljava/util/function/Consumer;accept(Ljava/lang/Object;)V"))
-    private void onFilterKeysSort(Consumer<List<KeyBindsList.Entry>> postConsumer, Object allEntries, Operation<Void> original) {
+    private void onFilterKeysSort(Consumer<List<KeyBindsList.Entry>> postConsumer, Object allEntries,
+            Operation<Void> original) {
         // Only call to consumer in this method is with a list of entries
         @SuppressWarnings("unchecked")
         List<KeyBindsList.Entry> list = ((List<KeyBindsList.Entry>) allEntries);
@@ -69,16 +99,19 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
             list.add(entry);
             if (entry instanceof KeyEntry keyEntry) {
                 String multiAction = "multi." + keyEntry.getKey().getName();
-                list.addAll(multiKeyBindingEntries.getOrDefault(multiAction, Collections.emptyList()));
+                list.addAll(multiKeyBindingEntries.getOrDefault(multiAction, List.of()));
             }
         }
     }
 
     /**
-     * If a child custom binding passes the filter predicate but its parent does not, retroactively add back the parent, but set it to be read-only.
+     * If a child custom binding passes the filter predicate but its parent does
+     * not, retroactively add back the parent, but set it to be read-only.
      */
     @WrapOperation(method = "filterKeys(Ljava/lang/String;)V", at = @At(value = "INVOKE", target = "Lcom/blamejared/searchables/api/SearchableType;filterEntries(Ljava/util/List;Ljava/lang/String;Ljava/util/function/Predicate;)Ljava/util/List;"))
-    private List<KeyBindsList.Entry> onFilterKeysFilter(SearchableType<KeyBindsList.Entry> instance, List<KeyBindsList.Entry> entries, String search, Predicate<KeyBindsList.Entry> predicate, Operation<List<KeyBindsList.Entry>> original) {
+    private List<KeyBindsList.Entry> onFilterKeysFilter(SearchableType<KeyBindsList.Entry> instance,
+            List<KeyBindsList.Entry> entries, String search, Predicate<KeyBindsList.Entry> predicate,
+            Operation<List<KeyBindsList.Entry>> original) {
         List<KeyBindsList.Entry> filtered = original.call(instance, entries, search, predicate);
 
         // Build a set of all parents that have children in the filtered list
@@ -98,7 +131,8 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
                 KeyBindsList.Entry parent = child.getParentEntry();
 
                 // Only set hidden if the parent didn't match the filter itself
-                if (parent instanceof ControllingHideableKeyEntry hideableKeyEntry && !parentsInFiltered.contains(parent)) {
+                if (parent instanceof ControllingHideableKeyEntry hideableKeyEntry
+                        && !parentsInFiltered.contains(parent)) {
                     hideableKeyEntry.setHidden(true);
                 }
 

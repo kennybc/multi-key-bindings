@@ -40,7 +40,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
         this.editButton = Button
                 .builder(Component.nullToEmpty(multiKeyBinding.getAction()), button -> {
                     this.parentScreen.setSelectedMultiKeyBinding(multiKeyBinding);
-                    multiKeyBinding.setKey(InputConstants.UNKNOWN);
+                    MultiKeyBindingManager.setKeyBinding(multiKeyBinding, InputConstants.UNKNOWN);
                     ModifierManager.setModifiers(multiKeyBinding.getId().toString(), List.of());
                     this.parentList.resetMappingAndUpdateButtons();
                 })
@@ -49,7 +49,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
 
         this.resetButton = Button
                 .builder(Component.translatable("controls.reset"), button -> {
-                    multiKeyBinding.setKey(InputConstants.UNKNOWN);
+                    MultiKeyBindingManager.setKeyBinding(multiKeyBinding, InputConstants.UNKNOWN);
                     ModifierManager.setModifiers(multiKeyBinding.getId().toString(), List.of());
                     this.parentList.resetMappingAndUpdateButtons();
                 })

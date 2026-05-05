@@ -2,6 +2,8 @@ package us.kenny;
 
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.StickyMultiKeyBinding;
+import us.kenny.mixin.KeyMappingAccessor;
+import us.kenny.mixin.ToggleKeyMappingAccessor;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -9,7 +11,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Options;
+import net.minecraft.client.ToggleKeyMapping;
 import java.util.function.BooleanSupplier;
 
 public class MultiKeyBindingManager {
@@ -98,6 +102,30 @@ public class MultiKeyBindingManager {
 
     public static Collection<MultiKeyBinding> getKeyBindings() {
         return ID_TO_BINDING.values();
+    }
+
+    /**
+     * Propagate a toggle flip across every toggle-mode binding for the given
+     * action so a vanilla ToggleKeyMapping and any sticky multi-bindings sharing
+     * the action stay in sync.
+     *
+     * @param action   The vanilla action name (e.g. "key.sneak"). The
+     *                 "multi." prefix is stripped if present so callers can
+     *                 pass either form.
+     * @param newState The post-flip state to propagate.
+     */
+    public static void syncToggleState(String action, boolean newState) {
+        String vanillaAction = action.startsWith("multi.") ? action.substring("multi.".length()) : action;
+        KeyMapping vanilla = KeyMapping.get(vanillaAction);
+        if (vanilla instanceof ToggleKeyMapping
+                && ((ToggleKeyMappingAccessor) (Object) vanilla).getNeedsToggle().getAsBoolean()) {
+            ((KeyMappingAccessor) vanilla).setIsDown(newState);
+        }
+        for (MultiKeyBinding binding : getKeyBindings(vanillaAction)) {
+            if (binding instanceof StickyMultiKeyBinding sticky && sticky.isToggleMode()) {
+                sticky.forceSetPressed(newState);
+            }
+        }
     }
 
     /**

@@ -12,7 +12,8 @@
     "KeyBindsScreenMixin",
     "KeyboardHandlerMixin",
     "KeyMappingMixin",
-    "OptionsMixin"
+    "OptionsMixin",
+    "ToggleKeyMappingAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

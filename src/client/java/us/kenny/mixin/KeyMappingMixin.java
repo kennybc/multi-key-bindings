@@ -4,6 +4,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -14,6 +15,7 @@ import us.kenny.core.StickyMultiKeyBinding;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
@@ -27,7 +29,7 @@ public abstract class KeyMappingMixin {
 
     /**
      * This covers mocking functionality in "on-demand" actions, where an
-     * event is triggered by the single press of a key.
+     * event is triggered by the single press of a key (for custom key bindings).
      */
     @Inject(method = "click", at = @At("TAIL"))
     private static void onClick(InputConstants.Key key, CallbackInfo ci) {
@@ -35,6 +37,23 @@ public abstract class KeyMappingMixin {
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             if (ModifierManager.areModifiersActive(multiKeyBinding.getId().toString())) {
                 multiKeyBinding.incrementTimesPressed();
+            }
+        }
+    }
+
+    /**
+     * @see us.kenny.mixin.KeyMappingMixin#onClick but for gating vanilla bindings.
+     */
+    @Redirect(method = "click", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/KeyMapping;forAllKeyMappings(Lcom/mojang/blaze3d/platform/InputConstants$Key;Ljava/util/function/Consumer;)V"))
+    private static void onClickVanilla(InputConstants.Key key, Consumer<KeyMapping> operation) {
+        List<KeyMapping> mappings = KeyMappingAccessor.getMap().get(key);
+        if (mappings == null || mappings.isEmpty()) {
+            return;
+        }
+        for (KeyMapping mapping : mappings) {
+            List<InputConstants.Key> primaryModifiers = ModifierManager.getModifiers(mapping.getName());
+            if (primaryModifiers.isEmpty() || ModifierManager.areModifiersActive(primaryModifiers)) {
+                operation.accept(mapping);
             }
         }
     }
@@ -182,7 +201,6 @@ public abstract class KeyMappingMixin {
                 cir.setReturnValue(false);
                 cir.cancel();
             }
-            // Modifiers are held — let vanilla check the key normally.
             return;
         }
     }

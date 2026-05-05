@@ -16,6 +16,18 @@ public class StickyMultiKeyBinding extends MultiKeyBinding {
         this.shouldRestore = shouldRestore;
     }
 
+    public boolean isToggleMode() {
+        return this.toggleGetter.getAsBoolean();
+    }
+
+    /**
+     * Set the pressed state directly. Used to keep sibling toggle bindings of the
+     * same action in sync after one of them flips.
+     */
+    public void forceSetPressed(boolean pressed) {
+        super.setPressed(pressed);
+    }
+
     @Override
     public void setPressed(boolean pressed) {
         if (this.toggleGetter.getAsBoolean()) {

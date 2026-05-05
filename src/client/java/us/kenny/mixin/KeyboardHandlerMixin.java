@@ -10,10 +10,27 @@ import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.util.Util;
+import us.kenny.KeyEventManager;
 import us.kenny.core.MultiKeyBindingScreen;
 
 @Mixin(KeyboardHandler.class)
 public class KeyboardHandlerMixin {
+
+    /**
+     * Captures the GLFW action int for the in-progress key event so that
+     * downstream KeyMapping logic can distinguish PRESS (1) from REPEAT (2).
+     * Vanilla calls KeyMapping.click()/set(true) on both PRESS and REPEAT,
+     * which causes modifier-augmented one-click actions to fire continuously
+     * and toggle bindings to flip rapidly when held.
+     */
+    @Inject(method = "keyPress", at = @At("HEAD"))
+    private void onKeyPressHead(
+            long window,
+            int action,
+            KeyEvent keyEvent,
+            CallbackInfo callbackInfo) {
+        KeyEventManager.setCurrentAction(action);
+    }
 
     /**
      * Injected in the method keyPress:

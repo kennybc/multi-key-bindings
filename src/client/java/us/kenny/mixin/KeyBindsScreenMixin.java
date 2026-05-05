@@ -64,11 +64,7 @@ public abstract class KeyBindsScreenMixin implements MultiKeyBindingScreen {
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(double mouseX, double mouseY, int button,
             CallbackInfoReturnable<Boolean> cir) {
-        if (this.selectedMultiKeyBinding != null) {
-            MultiKeyBindingManager.setKeyBinding(this.selectedMultiKeyBinding,
-                    InputConstants.Type.MOUSE.getOrCreate(button));
-            this.selectedMultiKeyBinding = null;
-            this.keyBindsList.resetMappingAndUpdateButtons();
+        if (MultiKeyBindingScreenHelper.handleMouseClicked(this, this.keyBindsList, button)) {
             cir.setReturnValue(true);
         }
     }

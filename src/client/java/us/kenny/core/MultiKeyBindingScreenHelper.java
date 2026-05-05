@@ -110,10 +110,10 @@ public final class MultiKeyBindingScreenHelper {
     }
 
     /**
-     * Accumulate a key press into the binding. If the pressed key is a modifier,
-     * add it to the modifier set and demote the current key. Otherwise, promote
-     * the current key to a modifier and make the pressed key the new primary bound
-     * key.
+     * Accumulate a key press into the binding. If the pressed key is a modifier
+     * being added to a non-modifier primary key, add it to the modifier set.
+     * Otherwise, promote the pressed key to primary and demote the previous primary
+     * to a modifier.
      *
      * @param id         The binding ID.
      * @param currentKey The current primary bound key.
@@ -122,7 +122,8 @@ public final class MultiKeyBindingScreenHelper {
      */
     private static void applyKeyPress(String id, InputConstants.Key currentKey, InputConstants.Key pressedKey,
             Consumer<InputConstants.Key> setKey) {
-        if (ModifierManager.isModifierKey(pressedKey) && !currentKey.equals(InputConstants.UNKNOWN)) {
+        if (ModifierManager.isModifierKey(pressedKey) && !currentKey.equals(InputConstants.UNKNOWN)
+                && !ModifierManager.isModifierKey(currentKey)) {
             ModifierManager.addModifier(id, pressedKey);
             ModifierManager.removeModifier(id, currentKey);
         } else {

@@ -102,7 +102,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
     }
 
     /**
-     * Check primary (vanilla) key bindings against custom ones for collisions.
+     * Check vanilla key bindings against custom ones for collisions.
      */
     @Inject(method = "refreshEntry", at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/screens/options/controls/KeyBindsList$KeyEntry;hasCollision:Z", ordinal = 1, opcode = Opcodes.GETFIELD))
     private void onGetHasCollision(CallbackInfo ci, @Local MutableComponent collisions) {

@@ -9,11 +9,21 @@ import java.util.Map;
 import org.lwjgl.glfw.GLFW;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import us.kenny.core.MultiKeyBinding;
+import us.kenny.mixin.KeyMappingAccessor;
 
 public class ModifierManager {
+    private static final List<InputConstants.Key> ALL_MODIFIERS = List.of(
+            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_LEFT_SHIFT),
+            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_RIGHT_SHIFT),
+            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_LEFT_CONTROL),
+            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_RIGHT_CONTROL),
+            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_LEFT_ALT),
+            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_RIGHT_ALT));
     private static final Map<String, List<InputConstants.Key>> KEY_MODIFIERS = new HashMap<>();
 
     /**
@@ -22,38 +32,67 @@ public class ModifierManager {
      * @param key The key to check if it is a modifier.
      */
     public static boolean isModifierKey(InputConstants.Key key) {
-        if (key.getType() != InputConstants.Type.KEYSYM)
-            return false;
-        int code = key.getValue();
-        return code == GLFW.GLFW_KEY_LEFT_SHIFT || code == GLFW.GLFW_KEY_RIGHT_SHIFT
-                || code == GLFW.GLFW_KEY_LEFT_CONTROL || code == GLFW.GLFW_KEY_RIGHT_CONTROL
-                || code == GLFW.GLFW_KEY_LEFT_ALT || code == GLFW.GLFW_KEY_RIGHT_ALT;
+        return ALL_MODIFIERS.contains(key);
     }
 
     /**
-     * Checks if all modifiers in the list are currently held down.
-     * Returns true if the list is empty.
+     * Checks if the binding's required modifier set is satisfied by the
+     * currently-held modifiers. The binding's primary key is excluded from the
+     * held set when it is itself a modifier (e.g. sneak bound to Shift).
      *
-     * @param modifiers The modifier keys to check.
+     * @param id       The action name (e.g. "key.jump") or binding UUID string.
+     * @param boundKey The binding's primary key.
+     * @param exact    Held must match required exactly when true; held must be
+     *                 a superset of required when false.
      */
-    public static boolean areModifiersActive(List<InputConstants.Key> modifiers) {
-        if (modifiers.isEmpty())
-            return true;
+    public static boolean areModifiersActive(String id, InputConstants.Key boundKey, boolean exact) {
+        List<InputConstants.Key> required = KEY_MODIFIERS.getOrDefault(id, List.of());
         long window = Minecraft.getInstance().getWindow().getWindow();
-        for (InputConstants.Key modifier : modifiers) {
-            if (!InputConstants.isKeyDown(window, modifier.getValue()))
+
+        int activeCount = 0;
+        for (InputConstants.Key modifier : ALL_MODIFIERS) {
+            if (modifier.equals(boundKey) || !InputConstants.isKeyDown(window, modifier.getValue())) {
+                continue;
+            }
+            if (required.contains(modifier)) {
+                activeCount++;
+            } else if (exact) {
                 return false;
+            }
+        }
+        return activeCount == required.size();
+    }
+
+    /**
+     * Decides whether a binding should fire on a press. A binding with configured
+     * modifiers fires only on exact match. A bare binding (no configured
+     * modifiers) fires only when no more-specific chords are matched.
+     *
+     * @param id       The action name (e.g. "key.jump") or binding UUID string.
+     * @param boundKey The binding's primary key.
+     */
+    public static boolean shouldActivate(String id, InputConstants.Key boundKey) {
+        if (!getModifiers(id).isEmpty()) {
+            return areModifiersActive(id, boundKey, true);
+        }
+
+        for (MultiKeyBinding binding : MultiKeyBindingManager.getKeyBindings(boundKey)) {
+            if (!getModifiers(binding.getId().toString()).isEmpty()
+                    && areModifiersActive(binding.getId().toString(), binding.getKey(), true)) {
+                return false;
+            }
+        }
+
+        for (KeyMapping mapping : MultiKeyBindingManager.getGameOptions().keyMappings) {
+            if (!((KeyMappingAccessor) mapping).getBoundKey().equals(boundKey)) {
+                continue;
+            }
+            if (!getModifiers(mapping.getName()).isEmpty()
+                    && areModifiersActive(mapping.getName(), boundKey, true)) {
+                return false;
+            }
         }
         return true;
-    }
-
-    /**
-     * Checks if all required modifiers for the given key are currently held down.
-     *
-     * @param id The action name or binding UUID string to look up.
-     */
-    public static boolean areModifiersActive(String id) {
-        return areModifiersActive(KEY_MODIFIERS.getOrDefault(id, List.of()));
     }
 
     /**
@@ -64,7 +103,8 @@ public class ModifierManager {
      * @param modifiers The modifier keys to require.
      */
     public static void setModifiers(String id, List<InputConstants.Key> modifiers) {
-        List<InputConstants.Key> filtered = modifiers.stream().filter(ModifierManager::isModifierKey).toList();
+        List<InputConstants.Key> filtered = modifiers.stream().filter(ModifierManager::isModifierKey).distinct()
+                .toList();
         if (filtered.isEmpty()) {
             KEY_MODIFIERS.remove(id);
         } else {

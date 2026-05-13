@@ -39,6 +39,34 @@ public abstract class KeyMappingMixin {
     }
 
     /**
+     * Called after a modifier key is released to release every currently-pressed
+     * binding whose required modifiers are no longer all held. Toggle bindings
+     * are skipped — their toggled state is meant to outlive modifier changes.
+     */
+    private static void pruneStaleBindings() {
+        for (MultiKeyBinding binding : MultiKeyBindingManager.getKeyBindings()) {
+            if (!binding.getPressed() || isMultiToggleActive(binding)) {
+                continue;
+            }
+            if (!ModifierManager.areModifiersActive(binding.getId().toString(), binding.getKey(), false)) {
+                binding.setPressed(false);
+            }
+        }
+        for (List<KeyMapping> mappings : KeyMappingAccessor.getMap().values()) {
+            for (KeyMapping mapping : mappings) {
+                KeyMappingAccessor accessor = (KeyMappingAccessor) mapping;
+                if (!accessor.getIsDown() || isVanillaToggleActive(mapping)
+                        || ModifierManager.getModifiers(mapping.getName()).isEmpty()) {
+                    continue;
+                }
+                if (!ModifierManager.areModifiersActive(mapping.getName(), accessor.getBoundKey(), false)) {
+                    accessor.setIsDown(false);
+                }
+            }
+        }
+    }
+
+    /**
      * This covers mocking functionality in "on-demand" actions, where an
      * event is triggered by the single press of a key (for custom key bindings).
      */
@@ -46,7 +74,7 @@ public abstract class KeyMappingMixin {
     private static void onClick(InputConstants.Key key, CallbackInfo ci) {
         Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(key);
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-            if (ModifierManager.areModifiersActive(multiKeyBinding.getId().toString())) {
+            if (ModifierManager.shouldActivate(multiKeyBinding.getId().toString(), multiKeyBinding.getKey())) {
                 multiKeyBinding.incrementTimesPressed();
             }
         }
@@ -62,8 +90,7 @@ public abstract class KeyMappingMixin {
             return;
         }
         for (KeyMapping mapping : mappings) {
-            List<InputConstants.Key> primaryModifiers = ModifierManager.getModifiers(mapping.getName());
-            if (primaryModifiers.isEmpty() || ModifierManager.areModifiersActive(primaryModifiers)) {
+            if (ModifierManager.shouldActivate(mapping.getName(), ((KeyMappingAccessor) mapping).getBoundKey())) {
                 operation.accept(mapping);
             }
         }
@@ -80,7 +107,7 @@ public abstract class KeyMappingMixin {
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             if (!pressed) {
                 multiKeyBinding.setPressed(false);
-            } else if (ModifierManager.areModifiersActive(multiKeyBinding.getId().toString())) {
+            } else if (ModifierManager.shouldActivate(multiKeyBinding.getId().toString(), multiKeyBinding.getKey())) {
                 if (repeat && isMultiToggleActive(multiKeyBinding)) {
                     continue;
                 }
@@ -90,6 +117,12 @@ public abstract class KeyMappingMixin {
                             multiKeyBinding.getPressed());
                 }
             }
+        }
+
+        // Modifier release can shrink the held set and invalidate active chords,
+        // modifier press only grows it, so no prune is needed.
+        if (!pressed && ModifierManager.isModifierKey(key)) {
+            pruneStaleBindings();
         }
     }
 
@@ -111,8 +144,7 @@ public abstract class KeyMappingMixin {
                 operation.accept(mapping);
                 continue;
             }
-            List<InputConstants.Key> primaryModifiers = ModifierManager.getModifiers(mapping.getName());
-            if (!primaryModifiers.isEmpty() && !ModifierManager.areModifiersActive(primaryModifiers)) {
+            if (!ModifierManager.shouldActivate(mapping.getName(), ((KeyMappingAccessor) mapping).getBoundKey())) {
                 continue;
             }
             if (repeat && isVanillaToggleActive(mapping)) {
@@ -134,8 +166,9 @@ public abstract class KeyMappingMixin {
                     && multiKeyBinding.getKey().getValue() != InputConstants.UNKNOWN.getValue()) {
                 boolean keyDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow(),
                         multiKeyBinding.getKey().getValue());
-                multiKeyBinding
-                        .setPressed(keyDown && ModifierManager.areModifiersActive(multiKeyBinding.getId().toString()));
+                multiKeyBinding.setPressed(keyDown
+                        && ModifierManager.shouldActivate(multiKeyBinding.getId().toString(),
+                                multiKeyBinding.getKey()));
             }
         }
     }
@@ -172,32 +205,12 @@ public abstract class KeyMappingMixin {
 
     @Inject(method = "isDown", at = @At("HEAD"), cancellable = true)
     private void onIsDown(CallbackInfoReturnable<Boolean> cir) {
-        // Check sub-bindings. Sticky multi-bindings in toggle mode keep their
-        // toggled state alive even after the modifier chord is released.
-        Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getName());
-        for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-            if (!multiKeyBinding.getPressed()) {
-                continue;
-            }
-            if (isMultiToggleActive(multiKeyBinding)
-                    || ModifierManager.areModifiersActive(multiKeyBinding.getId().toString())) {
+        for (MultiKeyBinding binding : MultiKeyBindingManager.getKeyBindings(this.getName())) {
+            if (binding.getPressed()) {
                 cir.setReturnValue(true);
                 cir.cancel();
                 return;
             }
-        }
-
-        // Suppress vanilla isDown when primary modifiers are required but not held —
-        // except for ToggleKeyMappings in toggle mode, where the toggled state must
-        // survive modifier release.
-        if (isVanillaToggleActive((KeyMapping) (Object) this)) {
-            return;
-        }
-        List<InputConstants.Key> primaryModifiers = ModifierManager.getModifiers(this.getName());
-        if (!primaryModifiers.isEmpty() && !ModifierManager.areModifiersActive(primaryModifiers)) {
-            cir.setReturnValue(false);
-            cir.cancel();
-            return;
         }
     }
 
@@ -247,22 +260,20 @@ public abstract class KeyMappingMixin {
             boolean keyMatches = keyEvent.key() == InputConstants.UNKNOWN.getValue()
                     ? multiKey.getType() == InputConstants.Type.SCANCODE && multiKey.getValue() == keyEvent.scancode()
                     : multiKey.getType() == InputConstants.Type.KEYSYM && multiKey.getValue() == keyEvent.key();
-            if (keyMatches && ModifierManager.areModifiersActive(multiKeyBinding.getId().toString())) {
+            String id = multiKeyBinding.getId().toString();
+            if (keyMatches && (ModifierManager.getModifiers(id).isEmpty()
+                    || ModifierManager.areModifiersActive(id, multiKeyBinding.getKey(), true))) {
                 cir.setReturnValue(true);
                 cir.cancel();
                 return;
             }
         }
 
-        // If this vanilla binding has primary modifiers, gate the vanilla match on
-        // them.
-        List<InputConstants.Key> primaryModifiers = ModifierManager.getModifiers(this.getName());
-        if (!primaryModifiers.isEmpty()) {
-            if (!ModifierManager.areModifiersActive(primaryModifiers)) {
-                cir.setReturnValue(false);
-                cir.cancel();
-            }
-            return;
+        if (!ModifierManager.getModifiers(this.getName()).isEmpty()
+                && !ModifierManager.areModifiersActive(this.getName(),
+                        ((KeyMappingAccessor) this).getBoundKey(), true)) {
+            cir.setReturnValue(false);
+            cir.cancel();
         }
     }
 
@@ -274,22 +285,20 @@ public abstract class KeyMappingMixin {
             InputConstants.Key multiKey = multiKeyBinding.getKey();
             boolean matches = multiKey.getType() == InputConstants.Type.MOUSE
                     && multiKey.getValue() == mouseButtonEvent.button();
-            if (matches && ModifierManager.areModifiersActive(multiKeyBinding.getId().toString())) {
+            String id = multiKeyBinding.getId().toString();
+            if (matches && (ModifierManager.getModifiers(id).isEmpty()
+                    || ModifierManager.areModifiersActive(id, multiKeyBinding.getKey(), true))) {
                 cir.setReturnValue(true);
                 cir.cancel();
                 return;
             }
         }
 
-        // If this vanilla binding has primary modifiers, gate the vanilla match on
-        // them.
-        List<InputConstants.Key> primaryModifiers = ModifierManager.getModifiers(this.getName());
-        if (!primaryModifiers.isEmpty()) {
-            if (!ModifierManager.areModifiersActive(primaryModifiers)) {
-                cir.setReturnValue(false);
-                cir.cancel();
-            }
-            return;
+        if (!ModifierManager.getModifiers(this.getName()).isEmpty()
+                && !ModifierManager.areModifiersActive(this.getName(),
+                        ((KeyMappingAccessor) this).getBoundKey(), true)) {
+            cir.setReturnValue(false);
+            cir.cancel();
         }
     }
 

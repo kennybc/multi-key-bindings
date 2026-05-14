@@ -1,0 +1,9 @@
+{
+  "key.category.multi-key-bindings.sticky_toggles": "Sticky Toggles",
+  "multi.toggle.key.sneak": "Sneak Sticky Toggle",
+  "multi.toggle.key.sprint": "Sprint Sticky Toggle",
+  "multi.toggle.key.use": "Use/Place Sticky Toggle",
+  "multi.toggle.key.attack": "Attack/Destroy Sticky Toggle",
+  "multi.toggle.state.on": "Toggle",
+  "multi.toggle.state.off": "Hold"
+}

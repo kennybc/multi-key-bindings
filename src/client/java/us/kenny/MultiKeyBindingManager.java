@@ -14,7 +14,6 @@ import java.util.UUID;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Options;
 import net.minecraft.client.ToggleKeyMapping;
-import java.util.function.BooleanSupplier;
 
 public class MultiKeyBindingManager {
     private static Options gameOptions;
@@ -22,15 +21,6 @@ public class MultiKeyBindingManager {
     private static final Map<String, List<MultiKeyBinding>> ACTION_TO_BINDINGS = new HashMap<>();
     private static final Map<InputConstants.Key, List<MultiKeyBinding>> KEY_TO_BINDINGS = new HashMap<>();
     private static final Map<UUID, MultiKeyBinding> ID_TO_BINDING = new HashMap<>();
-
-    private record StickySpec(BooleanSupplier toggleSupplier, boolean shouldRestore) {
-    }
-
-    private static Map<String, StickySpec> stickySpecs() {
-        return Map.of(
-                "multi.key.sneak", new StickySpec(gameOptions.toggleCrouch()::get, true),
-                "multi.key.sprint", new StickySpec(gameOptions.toggleSprint()::get, true));
-    }
 
     public static Options getGameOptions() {
         return MultiKeyBindingManager.gameOptions;
@@ -62,15 +52,16 @@ public class MultiKeyBindingManager {
         InputConstants.Key key = InputConstants.getKey(translationKey);
         MultiKeyBinding multiKeyBinding;
 
-        StickySpec spec = stickySpecs().get(action);
-        if (spec != null) {
+        StickyToggleManager.ToggleOption toggleOption = StickyToggleManager
+                .getToggleOption(StickyToggleManager.stripMultiPrefix(action));
+        if (toggleOption != null) {
             multiKeyBinding = new StickyMultiKeyBinding(
                     newId,
                     action,
                     category,
                     key,
-                    spec.toggleSupplier(),
-                    spec.shouldRestore());
+                    toggleOption.getter(),
+                    toggleOption.shouldRestore());
         } else {
             multiKeyBinding = new MultiKeyBinding(newId, action, category, key);
         }
@@ -106,22 +97,22 @@ public class MultiKeyBindingManager {
 
     /**
      * Propagate a toggle flip across every toggle-mode binding for the given
-     * action so a vanilla ToggleKeyMapping and any sticky multi-bindings sharing
+     * action so the base ToggleKeyMapping and any sticky multi-bindings sharing
      * the action stay in sync.
      *
-     * @param action   The vanilla action name (e.g. "key.sneak"). The
+     * @param action   The base KeyMapping action name (e.g. "key.sneak"). The
      *                 "multi." prefix is stripped if present so callers can
      *                 pass either form.
      * @param newState The post-flip state to propagate.
      */
     public static void syncToggleState(String action, boolean newState) {
-        String vanillaAction = action.startsWith("multi.") ? action.substring("multi.".length()) : action;
-        KeyMapping vanilla = KeyMapping.get(vanillaAction);
-        if (vanilla instanceof ToggleKeyMapping
-                && ((ToggleKeyMappingAccessor) (Object) vanilla).getNeedsToggle().getAsBoolean()) {
-            ((KeyMappingAccessor) vanilla).setIsDown(newState);
+        String baseAction = StickyToggleManager.stripMultiPrefix(action);
+        KeyMapping baseMapping = KeyMapping.get(baseAction);
+        if (baseMapping instanceof ToggleKeyMapping
+                && ((ToggleKeyMappingAccessor) (Object) baseMapping).getNeedsToggle().getAsBoolean()) {
+            ((KeyMappingAccessor) baseMapping).setIsDown(newState);
         }
-        for (MultiKeyBinding binding : getKeyBindings(vanillaAction)) {
+        for (MultiKeyBinding binding : getKeyBindings(baseAction)) {
             if (binding instanceof StickyMultiKeyBinding sticky && sticky.isToggleMode()) {
                 sticky.forceSetPressed(newState);
             }

@@ -5,11 +5,15 @@ import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Unique;
 import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
+import us.kenny.StickyToggleManager;
 import us.kenny.mixin.KeyBindsListAccessor;
 
+import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
@@ -24,17 +28,30 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
     protected final KeyBindsList parentList;
     protected MultiKeyBindingScreen parentScreen;
     private final MultiKeyBinding multiKeyBinding;
+    private final boolean primary;
     private boolean duplicate;
 
     private final Button editButton;
     private final Button resetButton;
     protected Button removeKeyBindingButton;
+    protected Button addKeyBindingButton;
+
+    /**
+     * @see us.kenny.core.controlling.ControllingMultiKeyBindingEntry#setHidden
+     */
+    protected boolean hidden;
 
     public MultiKeyBindingEntry(final KeyBindsList parentList, final MultiKeyBinding multiKeyBinding) {
+        this(parentList, multiKeyBinding, false);
+    }
+
+    public MultiKeyBindingEntry(final KeyBindsList parentList, final MultiKeyBinding multiKeyBinding,
+            final boolean primary) {
         this.parentList = parentList;
         this.parentScreen = ((MultiKeyBindingScreen) ((KeyBindsListAccessor) parentList)
                 .getKeyBindsScreen());
         this.multiKeyBinding = multiKeyBinding;
+        this.primary = primary;
 
         this.editButton = Button
                 .builder(Component.nullToEmpty(multiKeyBinding.getAction()), button -> {
@@ -55,16 +72,42 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
                 .size(50, 20)
                 .build();
 
-        this.removeKeyBindingButton = Button
-                .builder(Component.literal("\uD83D\uDDD1").withStyle(ChatFormatting.RED),
-                        (button) -> {
-                            MultiKeyBindingManager.removeKeyBinding(multiKeyBinding);
-                            this.parentScreen.setSelectedMultiKeyBinding(null);
-                            this.parentList.children().remove(this);
-                            this.parentList.resetMappingAndUpdateButtons();
-                        })
-                .size(20, 20)
-                .build();
+        if (primary) {
+            this.addKeyBindingButton = Button.builder(Component.literal("+"), button -> {
+                MultiKeyBinding subBinding = MultiKeyBindingManager.addKeyBinding(
+                        StickyToggleManager.stripMultiPrefix(multiKeyBinding.getAction()),
+                        multiKeyBinding.getCategory(),
+                        InputConstants.UNKNOWN);
+                MultiKeyBindingEntry subEntry = new MultiKeyBindingEntry(this.parentList, subBinding);
+
+                // Append after the contiguous run of sub-bindings already under this primary
+                // so insertion order matches the order seen on next screen open.
+                List<KeyBindsList.Entry> entries = new ArrayList<>(this.parentList.children());
+                int insertAt = entries.indexOf(this) + 1;
+                while (insertAt < entries.size() && entries.get(insertAt) instanceof MultiKeyBindingEntry sibling
+                        && !sibling.primary
+                        && sibling.multiKeyBinding.getAction().equals(multiKeyBinding.getAction())) {
+                    insertAt++;
+                }
+                entries.add(insertAt, subEntry);
+                this.parentList.replaceEntries(entries);
+            }).size(20, 20).build();
+        } else {
+            this.removeKeyBindingButton = Button
+                    .builder(Component.literal("\uD83D\uDDD1").withStyle(ChatFormatting.RED),
+                            (button) -> {
+                                MultiKeyBindingManager.removeKeyBinding(multiKeyBinding);
+                                this.parentScreen.setSelectedMultiKeyBinding(null);
+
+                                List<KeyBindsList.Entry> entries = new ArrayList<>(this.parentList.children());
+                                entries.remove(this);
+                                this.parentList.replaceEntries(entries);
+
+                                this.parentList.resetMappingAndUpdateButtons();
+                            })
+                    .size(20, 20)
+                    .build();
+        }
 
         this.refreshEntry();
     }
@@ -72,6 +115,11 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
     @Unique
     public MultiKeyBinding getMultiKeyBinding() {
         return this.multiKeyBinding;
+    }
+
+    @Unique
+    public boolean isPrimary() {
+        return this.primary;
     }
 
     /**
@@ -88,38 +136,48 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
 
         int resetButtonX = scrollbarX - this.resetButton.getWidth() - 10;
         this.resetButton.setPosition(resetButtonX, buttonY);
+        this.resetButton.active = !this.hidden && !this.multiKeyBinding.getKey().equals(InputConstants.UNKNOWN);
         this.resetButton.render(graphics, mouseX, mouseY, deltaTicks);
 
         int editButtonX = resetButtonX - this.editButton.getWidth() - 5;
         this.editButton.setPosition(editButtonX, buttonY);
+        this.editButton.active = !this.hidden;
         this.editButton.render(graphics, mouseX, mouseY, deltaTicks);
 
-        int removeKeyBindingButtonX = editButtonX - this.removeKeyBindingButton.getWidth() - 5;
-        this.removeKeyBindingButton.setPosition(removeKeyBindingButtonX, buttonY);
-        this.removeKeyBindingButton.render(graphics, mouseX, mouseY, deltaTicks);
+        Button button = this.primary ? this.addKeyBindingButton : this.removeKeyBindingButton;
+        int buttonX = editButtonX - button.getWidth() - 5;
+        button.setPosition(buttonX, buttonY);
+        button.render(graphics, mouseX, mouseY, deltaTicks);
 
         if (this.duplicate) {
             int stripeLeft = this.editButton.getX() - 6;
-            graphics.fill(stripeLeft, contentY - 1, stripeLeft + 3, contentY + entryHeight, -65536);
+            graphics.fill(stripeLeft, contentY - 1, stripeLeft + 3, contentY + entryHeight, -256);
         }
 
-        // Render an arrow instead of action name
-        int leftOffset = 10;
-        int topOffset = 5;
-        int arrowLength = 20;
+        if (this.primary) {
+            // Primary rows are top-level: render the action name on the left.
+            Font font = Minecraft.getInstance().font;
+            graphics.drawString(font, Component.translatable(this.multiKeyBinding.getTranslationKey()), contentX,
+                    contentY + entryHeight / 2 - font.lineHeight / 2, -1);
+        } else {
+            // Sub rows are indented under a parent: render an arrow instead of action name.
+            int leftOffset = 10;
+            int topOffset = 5;
+            int arrowLength = 20;
 
-        graphics.fill(contentX + leftOffset, contentY + topOffset, contentX + leftOffset + arrowLength,
-                contentY + topOffset + 1,
-                CommonColors.GRAY);
-        graphics.fill(contentX + leftOffset, contentY, contentX + leftOffset + 1, contentY + topOffset,
-                CommonColors.GRAY);
+            graphics.fill(contentX + leftOffset, contentY + topOffset, contentX + leftOffset + arrowLength,
+                    contentY + topOffset + 1,
+                    CommonColors.LIGHTER_GRAY);
+            graphics.fill(contentX + leftOffset, contentY, contentX + leftOffset + 1, contentY + topOffset,
+                    CommonColors.LIGHTER_GRAY);
 
-        int tipX = contentX + leftOffset + arrowLength;
-        for (int i = 0; i <= 2; i++) {
-            graphics.fill(tipX - i, contentY + topOffset - i, tipX - i + 1, contentY + topOffset - i + 1,
-                    CommonColors.GRAY);
-            graphics.fill(tipX - i, contentY + topOffset + i, tipX - i + 1, contentY + topOffset + i + 1,
-                    CommonColors.GRAY);
+            int tipX = contentX + leftOffset + arrowLength;
+            for (int i = 0; i <= 2; i++) {
+                graphics.fill(tipX - i, contentY + topOffset - i, tipX - i + 1, contentY + topOffset - i + 1,
+                        CommonColors.LIGHTER_GRAY);
+                graphics.fill(tipX - i, contentY + topOffset + i, tipX - i + 1, contentY + topOffset + i + 1,
+                        CommonColors.LIGHTER_GRAY);
+            }
         }
     }
 
@@ -162,7 +220,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
                     }
 
                     this.duplicate = true;
-                    duplicates.append(Component.translatable(mkb.getAction().replaceFirst("^multi.", "")));
+                    duplicates.append(Component.translatable(mkb.getTranslationKey()));
                 }
             }
         }
@@ -194,11 +252,13 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
      */
     @Override
     public List<? extends GuiEventListener> children() {
-        return ImmutableList.of(this.editButton, this.resetButton, this.removeKeyBindingButton);
+        Button button = this.primary ? this.addKeyBindingButton : this.removeKeyBindingButton;
+        return ImmutableList.of(this.editButton, this.resetButton, button);
     }
 
     @Override
     public List<? extends NarratableEntry> narratables() {
-        return ImmutableList.of(this.editButton, this.resetButton, this.removeKeyBindingButton);
+        Button button = this.primary ? this.addKeyBindingButton : this.removeKeyBindingButton;
+        return ImmutableList.of(this.editButton, this.resetButton, button);
     }
 }

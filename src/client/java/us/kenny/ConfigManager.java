@@ -45,15 +45,26 @@ public class ConfigManager {
      * attempt to migrate to latest config file format.
      */
     public static void loadConfigFile() {
-        if (!Files.exists(CONFIG_PATH))
+        try {
+            parseConfigFile();
+        } finally {
+            StickyToggleManager.ensurePrimaries();
+            isLoading = false;
+        }
+    }
+
+    private static void parseConfigFile() {
+        if (!Files.exists(CONFIG_PATH)) {
             return;
+        }
 
         boolean migrated = false;
 
         try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
             JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json == null)
+            if (json == null) {
                 return;
+            }
 
             int version = json.has("config_version") ? json.get("config_version").getAsInt() : 1;
             if (version < CONFIG_VERSION) {
@@ -83,6 +94,9 @@ public class ConfigManager {
 
                     // Empty category since unknown at startup, it will be filled in later
                     MultiKeyBindingManager.addKeyBinding(action, null, translationKey, id);
+                    if (keyBindingJson.has("primary") && keyBindingJson.get("primary").getAsBoolean()) {
+                        StickyToggleManager.setPrimary(action, id);
+                    }
                 }
             }
 
@@ -95,8 +109,6 @@ public class ConfigManager {
             }
         } catch (IOException e) {
             MultiKeyBindingClient.LOGGER.error("Failed to load config", e);
-        } finally {
-            isLoading = false;
         }
     }
 
@@ -144,13 +156,16 @@ public class ConfigManager {
             obj.addProperty("id", binding.getId().toString());
             obj.addProperty("action", binding.getAction());
             obj.addProperty("key", binding.getKey().getName());
+            if (StickyToggleManager.isPrimary(binding)) {
+                obj.addProperty("primary", true);
+            }
             array.add(obj);
         }
         return array;
     }
 
     /**
-     * Get all modifier entries (action name or binding UUID → modifier list) as a
+     * Get all modifier entries (action name or binding UUID -> modifier list) as a
      * JSON object.
      */
     private static JsonObject getFormattedModifiers() {

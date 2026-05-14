@@ -9,6 +9,7 @@
     "CustomListMixin",
     "DisplayModeMixin",
     "KeyEntryMixin",
+    "NewKeyBindsListMixin",
     "NewKeyBindsScreenMixin"
   ],
   "injectors": {

@@ -36,6 +36,12 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
     @Final
     @Shadow
     private KeyMapping key;
+    @Final
+    @Shadow
+    private Button changeButton;
+    @Final
+    @Shadow
+    private Button resetButton;
     @Shadow
     private boolean hasCollision;
 
@@ -85,8 +91,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
     private void onRender(GuiGraphics graphics, int index, int y, int x, int entryWidth, int entryHeight, int mouseX,
             int mouseY, boolean hovered, float deltaTicks, CallbackInfo ci) {
         // Mimic the positioning and layout of the existing buttons
-        int scrollbarX = keyBindsList.getRowRight() + 6 + 2;
-        int buttonX = scrollbarX - 165; // 5 wide gap between buttons, 20 wide "+" button
+        int buttonX = this.changeButton.getX() - this.addKeyBindingButton.getWidth() - 5;
         int buttonY = y - 2; // Align with the existing buttons
 
         // Shift "+" button to the left if the "Ok Zoomer" settings button is also
@@ -120,7 +125,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
                 collisions.append(", ");
             }
             this.hasCollision = true;
-            collisions.append(Component.translatable(mkb.getAction().replaceFirst("^multi.", "")));
+            collisions.append(Component.translatable(mkb.getTranslationKey()));
         }
     }
 

@@ -3,6 +3,7 @@ package us.kenny.core;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.network.chat.Component;
 import us.kenny.ModifierManager;
+import us.kenny.StickyToggleManager;
 
 import java.util.UUID;
 import net.minecraft.client.KeyMapping.Category;
@@ -88,5 +89,17 @@ public class MultiKeyBinding {
 
     public void setPressed(boolean pressed) {
         this.pressed = pressed;
+    }
+
+    /**
+     * The translation key to use when displaying this binding's name in the UI
+     * (collision tooltips, etc.). Mod-defined actions like the sticky-toggle
+     * group are their own translation keys; bindings under a vanilla key
+     * strip the "multi." prefix to share the vanilla translation.
+     */
+    public String getTranslationKey() {
+        return StickyToggleManager.isToggleAction(this.action)
+                ? this.action
+                : this.action.replaceFirst("^multi.", "");
     }
 }

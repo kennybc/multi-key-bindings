@@ -5,6 +5,7 @@ import com.blamejared.controlling.client.NewKeyBindsList;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -46,8 +47,9 @@ public abstract class CustomListMixin {
 
             Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager
                     .getKeyBindings(keyBinding.getName());
+            String category = Component.translatable(keyBinding.getCategory()).getString();
             for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-                multiKeyBinding.setCategory(keyBinding.getCategory());
+                multiKeyBinding.setCategory(category);
                 MultiKeyBindingEntry multiKeyBindingEntry = new ControllingMultiKeyBindingEntry(self, keyEntry,
                         multiKeyBinding);
                 ((CustomListAccessor) self).invokeAddEntry(multiKeyBindingEntry);

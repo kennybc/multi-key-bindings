@@ -1,7 +1,9 @@
 package us.kenny.mixin.controlling;
 
 import com.blamejared.controlling.api.SortOrder;
+import com.blamejared.controlling.api.entries.IKeyEntry;
 import com.blamejared.controlling.client.CustomList;
+import com.blamejared.controlling.client.NewKeyBindsList;
 import com.blamejared.controlling.client.NewKeyBindsScreen;
 import com.blamejared.controlling.client.NewKeyBindsList.KeyEntry;
 import com.blamejared.searchables.api.SearchableType;
@@ -18,6 +20,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import us.kenny.StickyToggleManager;
 import us.kenny.core.MultiKeyBindingEntry;
 import us.kenny.core.MultiKeyBindingScreen;
 import us.kenny.core.MultiKeyBindingScreenHelper;
@@ -70,21 +73,31 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
      * sorting. After sorting, we add them back in place.
      */
     @WrapOperation(method = "Lcom/blamejared/controlling/client/NewKeyBindsScreen;filterKeys(Ljava/lang/String;)V", at = @At(value = "INVOKE", target = "Ljava/util/function/Consumer;accept(Ljava/lang/Object;)V"))
-    private void onFilterKeysSort(Consumer<List<KeyBindsList.Entry>> postConsumer, Object allEntries,
+    private void onFilterKeysSort(Consumer<List<KeyBindsList.Entry>> postConsumer, Object object,
             Operation<Void> original) {
         // Only call to consumer in this method is with a list of entries
         @SuppressWarnings("unchecked")
-        List<KeyBindsList.Entry> list = ((List<KeyBindsList.Entry>) allEntries);
+        List<NewKeyBindsList.Entry> entries = ((List<NewKeyBindsList.Entry>) object);
+        CustomList list = this.getCustomList();
 
-        // Separate out any MultiKeyBindingEntry so they don't undergo sorting
+        // Separate out any MultiKeyBindingEntry so they don't undergo sorting.
+        // Toggle primaries + subs form a fixed section at the end of the list,
+        // kept in original order. The category header is treated like any other
+        // CategoryEntry — vanilla and ours both get dropped in sort mode.
         HashMap<String, List<MultiKeyBindingEntry>> multiKeyBindingEntries = new HashMap<>();
         List<KeyBindsList.Entry> regularEntries = new ArrayList<>();
+        List<NewKeyBindsList.Entry> toggleSection = new ArrayList<>();
 
-        for (KeyBindsList.Entry entry : list) {
+        for (NewKeyBindsList.Entry entry : entries) {
             if (entry instanceof MultiKeyBindingEntry multiKeyBindingEntry) {
-                multiKeyBindingEntries
-                        .computeIfAbsent(multiKeyBindingEntry.getMultiKeyBinding().getAction(), k -> new ArrayList<>())
-                        .add(multiKeyBindingEntry);
+                if (StickyToggleManager.isToggleAction(multiKeyBindingEntry.getMultiKeyBinding().getAction())) {
+                    toggleSection.add(entry);
+                } else {
+                    multiKeyBindingEntries
+                            .computeIfAbsent(multiKeyBindingEntry.getMultiKeyBinding().getAction(),
+                                    k -> new ArrayList<>())
+                            .add(multiKeyBindingEntry);
+                }
             } else {
                 regularEntries.add(entry);
             }
@@ -94,14 +107,16 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
         original.call(postConsumer, regularEntries);
 
         // Clear and rebuild children with custom bindings in correct place
-        list.clear();
+        entries.clear();
         for (KeyBindsList.Entry entry : regularEntries) {
-            list.add(entry);
+            entries.add(entry);
             if (entry instanceof KeyEntry keyEntry) {
                 String multiAction = "multi." + keyEntry.getKey().getName();
-                list.addAll(multiKeyBindingEntries.getOrDefault(multiAction, List.of()));
+                entries.addAll(multiKeyBindingEntries.getOrDefault(multiAction, List.of()));
             }
         }
+        // Append the sticky-toggle section in its original order.
+        toggleSection.forEach(entries::add);
     }
 
     /**
@@ -114,10 +129,11 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
             Operation<List<KeyBindsList.Entry>> original) {
         List<KeyBindsList.Entry> filtered = original.call(instance, entries, search, predicate);
 
-        // Build a set of all parents that have children in the filtered list
+        // Build a set of all parents that have children in the filtered list.
+        // Toggle primaries have parentEntry == null (top-level); skip those.
         Set<KeyBindsList.Entry> parentsToReinsert = new HashSet<>();
         for (KeyBindsList.Entry entry : filtered) {
-            if (entry instanceof ControllingMultiKeyBindingEntry child) {
+            if (entry instanceof ControllingMultiKeyBindingEntry child && child.getParentEntry() != null) {
                 parentsToReinsert.add(child.getParentEntry());
             }
         }
@@ -130,15 +146,17 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
             if (entry instanceof ControllingMultiKeyBindingEntry child) {
                 KeyBindsList.Entry parent = child.getParentEntry();
 
-                // Only set hidden if the parent didn't match the filter itself
-                if (parent instanceof ControllingHideableKeyEntry hideableKeyEntry
-                        && !parentsInFiltered.contains(parent)) {
-                    hideableKeyEntry.setHidden(true);
-                }
+                if (parent != null) {
+                    // Only set hidden if the parent didn't match the filter itself
+                    if (parent instanceof ControllingHideableKeyEntry hideableKeyEntry
+                            && !parentsInFiltered.contains(parent)) {
+                        hideableKeyEntry.setHidden(true);
+                    }
 
-                if (!insertedParents.contains(parent)) {
-                    rebuilt.add(parent);
-                    insertedParents.add(parent);
+                    if (!insertedParents.contains(parent)) {
+                        rebuilt.add(parent);
+                        insertedParents.add(parent);
+                    }
                 }
             }
             // Skip parents that will be re-added when processing their children

@@ -54,7 +54,18 @@ public class ControllingMultiKeyBindingEntry extends MultiKeyBindingEntry implem
                 }
                 entries.add(insertAt, subEntry);
 
-                parentList.allEntries.add(subEntry);
+                // allEntries is the persistent backing list Controlling rebuilds
+                // from on filter/sort, so the sub must be inserted next to its
+                // primary there too — otherwise a search refresh reorders it to
+                // the end of the sticky section under the wrong parent.
+                int allInsertAt = parentList.allEntries.indexOf(this) + 1;
+                while (allInsertAt < parentList.allEntries.size()
+                        && parentList.allEntries.get(allInsertAt) instanceof MultiKeyBindingEntry sibling
+                        && !sibling.isPrimary()
+                        && sibling.getMultiKeyBinding().getAction().equals(multiKeyBinding.getAction())) {
+                    allInsertAt++;
+                }
+                parentList.allEntries.add(allInsertAt, subEntry);
                 parentList.clearEntries();
                 for (KeyBindsList.Entry entry : entries) {
                     parentList.addEntryInternal(entry);

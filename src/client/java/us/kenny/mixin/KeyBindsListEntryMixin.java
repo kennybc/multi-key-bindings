@@ -94,8 +94,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
             float deltaTicks,
             CallbackInfo ci) {
         // Mimic the positioning and layout of the existing buttons
-        int scrollbarX = this.keyBindsList.getRowRight() + 6 + 2;
-        int buttonX = scrollbarX - 165; // 5 wide gap between buttons, 20 wide "+" button
+        int buttonX = this.changeButton.getX() - this.addKeyBindingButton.getWidth() - 5;
         int buttonY = this.getContentY() - 2;
         // Align with the existing buttons
 
@@ -124,7 +123,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
                 collisions.append(", ");
             }
             this.hasCollision = true;
-            collisions.append(Component.translatable(mkb.getAction().replaceFirst("^multi.", "")));
+            collisions.append(Component.translatable(mkb.getTranslationKey()));
         }
     }
 

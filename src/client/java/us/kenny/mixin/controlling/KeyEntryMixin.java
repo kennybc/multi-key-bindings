@@ -166,7 +166,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
                 collisions.append(", ");
             }
             this.hasCollision = true;
-            collisions.append(Component.translatable(mkb.getAction().replaceFirst("^multi.", "")));
+            collisions.append(Component.translatable(mkb.getTranslationKey()));
         }
     }
 

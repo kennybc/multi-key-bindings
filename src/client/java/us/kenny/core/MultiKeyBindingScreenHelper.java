@@ -65,8 +65,9 @@ public final class MultiKeyBindingScreenHelper {
      * @param screen   The key binding screen.
      * @param list     The list widget.
      * @param keyEvent The key event.
-     * @return True if the key was consumed. Escape clears bindings but is not
-     *         consumed (vanilla handles it).
+     * @return True if the key was consumed. Escape on a vanilla selectedKey is
+     *         not consumed so vanilla's own escape handling runs; escape on a
+     *         multi-binding is consumed to prevent the screen from closing.
      */
     public static boolean handleKeyPressed(MultiKeyBindingScreen screen, KeyBindsList list, KeyEvent keyEvent) {
         InputConstants.Key pressedKey = InputConstants.getKey(keyEvent);
@@ -80,6 +81,9 @@ public final class MultiKeyBindingScreenHelper {
             if (selectedMultiKeyBinding != null) {
                 MultiKeyBindingManager.setKeyBinding(selectedMultiKeyBinding, InputConstants.UNKNOWN);
                 ModifierManager.setModifiers(selectedMultiKeyBinding.getId().toString(), List.of());
+                screen.setSelectedMultiKeyBinding(null);
+                list.resetMappingAndUpdateButtons();
+                return true;
             }
             return false;
         }

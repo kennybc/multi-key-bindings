@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.3 (May 13, 2026)
+
+- Add custom key binding entries for toggling sticky keys (toggle vs hold)
+
 ## 1.3.2 (May 12, 2026)
 
 - Fix sticky modifiers when releasing a chord

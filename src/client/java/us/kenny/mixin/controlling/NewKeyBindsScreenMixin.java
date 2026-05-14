@@ -19,6 +19,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import us.kenny.StickyToggleManager;
 import us.kenny.core.MultiKeyBindingEntry;
 import us.kenny.core.MultiKeyBindingScreen;
 import us.kenny.core.MultiKeyBindingScreenHelper;
@@ -77,19 +78,29 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
         List<NewKeyBindsList.Entry> entries = ((List<NewKeyBindsList.Entry>) object);
         CustomList list = this.getCustomList();
 
-        // Separate out any MultiKeyBindingEntry so they don't undergo sorting
+        // Separate out any MultiKeyBindingEntry so they don't undergo sorting.
+        // Toggle primaries + subs form a fixed section at the end of the list,
+        // kept in original order. The category header is treated like any other
+        // CategoryEntry — vanilla and ours both get dropped in sort mode.
         HashMap<String, List<MultiKeyBindingEntry>> multiKeyBindingEntries = new HashMap<>();
+        List<NewKeyBindsList.Entry> toggleSection = new ArrayList<>();
 
         for (NewKeyBindsList.Entry entry : entries) {
             if (entry instanceof MultiKeyBindingEntry multiKeyBindingEntry) {
-                multiKeyBindingEntries
-                        .computeIfAbsent(multiKeyBindingEntry.getMultiKeyBinding().getAction(), k -> new ArrayList<>())
-                        .add(multiKeyBindingEntry);
+                if (StickyToggleManager.isToggleAction(multiKeyBindingEntry.getMultiKeyBinding().getAction())) {
+                    toggleSection.add(entry);
+                } else {
+                    multiKeyBindingEntries
+                            .computeIfAbsent(multiKeyBindingEntry.getMultiKeyBinding().getAction(),
+                                    k -> new ArrayList<>())
+                            .add(multiKeyBindingEntry);
+                }
             }
         }
 
         // Sort only the regular entries
-        entries.removeIf((entry) -> (entry instanceof MultiKeyBindingEntry) || !(entry instanceof IKeyEntry));
+        entries.removeIf((entry) -> (entry instanceof MultiKeyBindingEntry)
+                || !(entry instanceof IKeyEntry));
         list.sort(this.sortOrder);
         List<NewKeyBindsList.Entry> sortedEntries = new ArrayList<>(list.children());
 
@@ -102,6 +113,8 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
                 multiKeyBindingEntries.getOrDefault(multiAction, List.of()).forEach(list::addEntryInternal);
             }
         }
+        // Append the sticky-toggle section in its original order.
+        toggleSection.forEach(list::addEntryInternal);
     }
 
     /**
@@ -114,10 +127,11 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
             Operation<List<KeyBindsList.Entry>> original) {
         List<KeyBindsList.Entry> filtered = original.call(instance, entries, search, predicate);
 
-        // Build a set of all parents that have children in the filtered list
+        // Build a set of all parents that have children in the filtered list.
+        // Toggle primaries have parentEntry == null (top-level); skip those.
         Set<KeyBindsList.Entry> parentsToReinsert = new HashSet<>();
         for (KeyBindsList.Entry entry : filtered) {
-            if (entry instanceof ControllingMultiKeyBindingEntry child) {
+            if (entry instanceof ControllingMultiKeyBindingEntry child && child.getParentEntry() != null) {
                 parentsToReinsert.add(child.getParentEntry());
             }
         }
@@ -130,15 +144,17 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
             if (entry instanceof ControllingMultiKeyBindingEntry child) {
                 KeyBindsList.Entry parent = child.getParentEntry();
 
-                // Only set hidden if the parent didn't match the filter itself
-                if (parent instanceof ControllingHideableKeyEntry hideableKeyEntry
-                        && !parentsInFiltered.contains(parent)) {
-                    hideableKeyEntry.setHidden(true);
-                }
+                if (parent != null) {
+                    // Only set hidden if the parent didn't match the filter itself
+                    if (parent instanceof ControllingHideableKeyEntry hideableKeyEntry
+                            && !parentsInFiltered.contains(parent)) {
+                        hideableKeyEntry.setHidden(true);
+                    }
 
-                if (!insertedParents.contains(parent)) {
-                    rebuilt.add(parent);
-                    insertedParents.add(parent);
+                    if (!insertedParents.contains(parent)) {
+                        rebuilt.add(parent);
+                        insertedParents.add(parent);
+                    }
                 }
             }
             // Skip parents that will be re-added when processing their children

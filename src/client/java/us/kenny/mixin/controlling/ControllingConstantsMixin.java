@@ -33,7 +33,7 @@ public class ControllingConstantsMixin {
             case "category" -> Optional.of(multiKeyBinding.getCategory().label().getString());
             case "key" -> Optional.of(multiKeyBinding.getDisplayName().getString());
             case "name" -> Optional.of(
-                    Component.translatable(multiKeyBinding.getAction().replaceFirst("^multi.", "")).getString());
+                    Component.translatable(multiKeyBinding.getTranslationKey()).getString());
             default -> Optional.empty();
         };
     }

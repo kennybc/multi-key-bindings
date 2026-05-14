@@ -2,19 +2,24 @@ package us.kenny.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
 import us.kenny.MultiKeyBindingManager;
+import us.kenny.StickyToggleManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
 
 import java.util.Collection;
+import java.util.UUID;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractSelectionList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
+import net.minecraft.network.chat.Component;
 
 @Mixin(KeyBindsList.class)
 public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsList.Entry> {
@@ -41,8 +46,9 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
             // Create and insert a MultiKeyBindingEntry for any custom bindings
             Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager
                     .getKeyBindings(keyBinding.getName());
+            String category = Component.translatable(keyBinding.getCategory()).getString();
             for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-                multiKeyBinding.setCategory(keyBinding.getCategory());
+                multiKeyBinding.setCategory(category);
                 MultiKeyBindingEntry multiKeyBindingEntry = new MultiKeyBindingEntry(self, multiKeyBinding);
 
                 lastIndex = original.call(instance, multiKeyBindingEntry);
@@ -50,5 +56,45 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
         }
 
         return lastIndex;
+    }
+
+    /**
+     * After the vanilla list is built, append a primary entry for each
+     * "multi.toggle.key.*" action followed by any sub-bindings the user has
+     * added for it.
+     */
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void addToggleStickyEntries(CallbackInfo ci) {
+        KeyBindsList self = (KeyBindsList) (Object) this;
+        // Subclasses (e.g. Controlling's CustomList/NewKeyBindsList) rebuild entries
+        // in their own constructor and want their own toggle-section injection.
+        if (self.getClass() != KeyBindsList.class) {
+            return;
+        }
+        boolean headerAdded = false;
+        for (String action : StickyToggleManager.STICKY_ACTIONS) {
+            Collection<MultiKeyBinding> bindings = MultiKeyBindingManager.getKeyBindings(action);
+            UUID primaryId = StickyToggleManager.getPrimaryId("multi." + action);
+            MultiKeyBinding primary = primaryId == null ? null
+                    : bindings.stream().filter(b -> b.getId().equals(primaryId)).findFirst().orElse(null);
+            if (primary == null) {
+                continue;
+            }
+            if (!headerAdded) {
+                this.addEntry(self.new CategoryEntry(StickyToggleManager.STICKY_TOGGLES_CATEGORY));
+                headerAdded = true;
+            }
+            String category = StickyToggleManager.STICKY_TOGGLES_CATEGORY.getString();
+            primary.setCategory(category);
+            this.addEntry(new MultiKeyBindingEntry(self, primary, true));
+
+            for (MultiKeyBinding sub : bindings) {
+                if (sub == primary) {
+                    continue;
+                }
+                sub.setCategory(category);
+                this.addEntry(new MultiKeyBindingEntry(self, sub));
+            }
+        }
     }
 }

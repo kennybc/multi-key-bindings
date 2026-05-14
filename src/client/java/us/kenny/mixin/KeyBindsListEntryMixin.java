@@ -100,6 +100,12 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
 
         this.addKeyBindingButton.setPosition(buttonX, buttonY);
         this.addKeyBindingButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
+
+        // Shift "+" button to the left if the "Ok Zoomer" settings button is also
+        // rendered
+        if (key.getName().equals("key.ok_zoomer.zoom") && this.children().size() > 3) {
+            buttonX -= 22;
+        }
     }
 
     /**

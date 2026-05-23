@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import us.kenny.StickyToggleManager;
+import us.kenny.ToggleManager;
 import us.kenny.core.MultiKeyBindingEntry;
 import us.kenny.core.MultiKeyBindingScreen;
 import us.kenny.core.MultiKeyBindingScreenHelper;
@@ -87,7 +87,7 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
 
         for (NewKeyBindsList.Entry entry : entries) {
             if (entry instanceof MultiKeyBindingEntry multiKeyBindingEntry) {
-                if (StickyToggleManager.isToggleAction(multiKeyBindingEntry.getMultiKeyBinding().getAction())) {
+                if (ToggleManager.isToggleAction(multiKeyBindingEntry.getMultiKeyBinding().getAction())) {
                     toggleSection.add(entry);
                 } else {
                     multiKeyBindingEntries
@@ -113,7 +113,7 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
                 multiKeyBindingEntries.getOrDefault(multiAction, List.of()).forEach(list::addEntryInternal);
             }
         }
-        // Append the sticky-toggle section in its original order.
+        // Append the toggles section in its original order.
         toggleSection.forEach(list::addEntryInternal);
     }
 

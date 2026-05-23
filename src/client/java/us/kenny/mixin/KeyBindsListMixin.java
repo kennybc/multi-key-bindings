@@ -9,7 +9,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
 import us.kenny.MultiKeyBindingManager;
-import us.kenny.StickyToggleManager;
+import us.kenny.ToggleManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
 
@@ -62,7 +62,7 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
      * added for it.
      */
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void addToggleStickyEntries(CallbackInfo ci) {
+    private void addToggleEntries(CallbackInfo ci) {
         KeyBindsList self = (KeyBindsList) (Object) this;
         // Subclasses (e.g. Controlling's CustomList/NewKeyBindsList) rebuild entries
         // in their own constructor and want their own toggle-section injection.
@@ -70,16 +70,16 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
             return;
         }
         boolean headerAdded = false;
-        for (String action : StickyToggleManager.STICKY_ACTIONS) {
+        for (String action : ToggleManager.TOGGLE_ACTIONS) {
             Collection<MultiKeyBinding> bindings = MultiKeyBindingManager.getKeyBindings(action);
-            UUID primaryId = StickyToggleManager.getPrimaryId("multi." + action);
+            UUID primaryId = ToggleManager.getPrimaryId("multi." + action);
             MultiKeyBinding primary = primaryId == null ? null
                     : bindings.stream().filter(b -> b.getId().equals(primaryId)).findFirst().orElse(null);
             if (primary == null) {
                 continue;
             }
             if (!headerAdded) {
-                this.addEntry(self.new CategoryEntry(StickyToggleManager.STICKY_TOGGLES_CATEGORY));
+                this.addEntry(self.new CategoryEntry(ToggleManager.TOGGLES_CATEGORY));
                 headerAdded = true;
             }
             this.addEntry(new MultiKeyBindingEntry(self, primary, true));
@@ -89,7 +89,7 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
                     continue;
                 }
                 if (sub.getCategory() == null) {
-                    sub.setCategory(StickyToggleManager.STICKY_TOGGLES_CATEGORY);
+                    sub.setCategory(ToggleManager.TOGGLES_CATEGORY);
                 }
                 this.addEntry(new MultiKeyBindingEntry(self, sub));
             }

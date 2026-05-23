@@ -52,8 +52,8 @@ public class MultiKeyBindingManager {
         InputConstants.Key key = InputConstants.getKey(translationKey);
         MultiKeyBinding multiKeyBinding;
 
-        StickyToggleManager.ToggleOption toggleOption = StickyToggleManager
-                .getToggleOption(StickyToggleManager.stripMultiPrefix(action));
+        ToggleManager.ToggleOption toggleOption = ToggleManager
+                .getToggleOption(ToggleManager.stripMultiPrefix(action));
         if (toggleOption != null) {
             multiKeyBinding = new StickyMultiKeyBinding(
                     newId,
@@ -106,7 +106,7 @@ public class MultiKeyBindingManager {
      * @param newState The post-flip state to propagate.
      */
     public static void syncToggleState(String action, boolean newState) {
-        String baseAction = StickyToggleManager.stripMultiPrefix(action);
+        String baseAction = ToggleManager.stripMultiPrefix(action);
         KeyMapping baseMapping = KeyMappingAccessor.getAll().get(baseAction);
         if (baseMapping instanceof ToggleKeyMapping
                 && ((ToggleKeyMappingAccessor) (Object) baseMapping).getNeedsToggle().getAsBoolean()) {

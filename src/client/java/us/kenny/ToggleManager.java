@@ -25,25 +25,26 @@ import us.kenny.mixin.KeyMappingAccessor;
 import us.kenny.mixin.ToggleKeyMappingAccessor;
 
 /**
- * Owns the "multi.toggle.key.*" bindings that flip a base Minecraft
- * sticky-toggle game option (toggle-sneak, toggle-sprint, toggle-use,
- * toggle-attack) when pressed.
+ * Owns the "multi.toggle.*" bindings that flip a base Minecraft game option
+ * when pressed. Covers the four sticky-mode toggles (sneak/sprint/use/attack
+ * — switch between Toggle and Hold mode) as well as plain on/off options
+ * such as auto-jump.
  */
-public class StickyToggleManager {
+public class ToggleManager {
     /**
-     * Maps a "multi.toggle.key.*" action to the UUID of the binding that
+     * Maps a "multi.toggle.*" action to the UUID of the binding that
      * represents its primary row in the binds UI. Persisted so that the same
      * binding (and its modifier chord) stays primary across launches.
      */
     private static final Map<String, UUID> PRIMARIES = new HashMap<>();
     private static final String ACTION_PREFIX = "multi.toggle.";
-    public static final Category STICKY_TOGGLES_CATEGORY = Category
-            .register(Identifier.fromNamespaceAndPath("multi-key-bindings", "sticky_toggles"));
+    public static final Category TOGGLES_CATEGORY = Category
+            .register(Identifier.fromNamespaceAndPath("multi-key-bindings", "toggles"));
 
     /**
-     * One row per base Minecraft sticky-toggle option. The setter and getter
-     * flip and read the option's toggle-mode flag; shouldRestore drives
-     * sticky-binding state restoration after a toggle-off cycle.
+     * One row per base Minecraft toggleable option. The setter and getter
+     * flip and read the option's value; shouldRestore drives sticky-binding
+     * state restoration after a toggle-off cycle (sticky-mode actions only).
      */
     public record ToggleOption(Consumer<Boolean> setter, BooleanSupplier getter, boolean shouldRestore) {
     }
@@ -52,11 +53,12 @@ public class StickyToggleManager {
      * Action names (without the "multi." prefix) in display order.
      * Used by the binds list UI to render primaries top-to-bottom.
      */
-    public static final List<String> STICKY_ACTIONS = List.of(
+    public static final List<String> TOGGLE_ACTIONS = List.of(
             "toggle.key.sneak",
             "toggle.key.sprint",
             "toggle.key.use",
-            "toggle.key.attack");
+            "toggle.key.attack",
+            "toggle.options.autoJump");
 
     private static Map<String, ToggleOption> TOGGLE_OPTIONS;
 
@@ -71,15 +73,16 @@ public class StickyToggleManager {
                     "key.use",
                     new ToggleOption(gameOptions.toggleUse()::set, gameOptions.toggleUse()::get, false),
                     "key.attack",
-                    new ToggleOption(gameOptions.toggleAttack()::set, gameOptions.toggleAttack()::get, true));
+                    new ToggleOption(gameOptions.toggleAttack()::set, gameOptions.toggleAttack()::get, true),
+                    "options.autoJump",
+                    new ToggleOption(gameOptions.autoJump()::set, gameOptions.autoJump()::get, false));
         }
         return TOGGLE_OPTIONS;
     }
 
     /**
-     * Look up the ToggleOption for a base KeyMapping action name (e.g.
-     * "key.sneak"), or null if the action isn't one of the four sticky-toggle
-     * options.
+     * Look up the ToggleOption for a base action name (e.g. "key.sneak" or
+     * "options.autoJump"), or null if the action isn't a registered toggle.
      *
      * @see ToggleOption
      */
@@ -134,19 +137,19 @@ public class StickyToggleManager {
 
             if (primary == null) {
                 primary = existing.stream().findFirst()
-                        .orElseGet(() -> MultiKeyBindingManager.addKeyBinding(action, STICKY_TOGGLES_CATEGORY,
+                        .orElseGet(() -> MultiKeyBindingManager.addKeyBinding(action, TOGGLES_CATEGORY,
                                 InputConstants.UNKNOWN.getName(), UUID.randomUUID()));
                 PRIMARIES.put(action, primary.getId());
             }
             if (primary.getCategory() == null) {
-                primary.setCategory(STICKY_TOGGLES_CATEGORY);
+                primary.setCategory(TOGGLES_CATEGORY);
             }
         }
     }
 
     /**
-     * Flip the base Minecraft "toggle" game option associated with the given
-     * action. Called when a key bound to a "multi.toggle.key.*" binding fires.
+     * Flip the base Minecraft game option associated with the given action.
+     * Called when a key bound to a "multi.toggle.*" binding fires.
      */
     public static void flip(String action) {
         if (!isToggleAction(action)) {
@@ -188,10 +191,16 @@ public class StickyToggleManager {
         if (mc.gui == null) {
             return;
         }
+        // Sticky-mode actions (sneak/sprint/use/attack) flip a KeyMapping between
+        // Toggle and Hold modes. Other actions (e.g. autoJump) are plain on/off
+        // settings without a backing KeyMapping, so use ON/OFF labels instead.
+        boolean hasKeyMapping = KeyMapping.get(action) != null;
+        String onKey = hasKeyMapping ? "multi.toggle.state.on" : "options.on";
+        String offKey = hasKeyMapping ? "multi.toggle.state.off" : "options.off";
         Component message = Component.translatable(action)
                 .copy()
                 .append(": ")
-                .append(Component.translatable(state ? "multi.toggle.state.on" : "multi.toggle.state.off")
+                .append(Component.translatable(state ? onKey : offKey)
                         .withStyle(state ? ChatFormatting.GREEN : ChatFormatting.RED));
         mc.gui.setOverlayMessage(message, false);
     }

@@ -5,7 +5,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Unique;
 import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
-import us.kenny.StickyToggleManager;
+import us.kenny.ToggleManager;
 import us.kenny.mixin.KeyBindsListAccessor;
 
 import java.util.ArrayList;
@@ -75,7 +75,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
         if (primary) {
             this.addKeyBindingButton = Button.builder(Component.literal("+"), button -> {
                 MultiKeyBinding subBinding = MultiKeyBindingManager.addKeyBinding(
-                        StickyToggleManager.stripMultiPrefix(multiKeyBinding.getAction()),
+                        ToggleManager.stripMultiPrefix(multiKeyBinding.getAction()),
                         multiKeyBinding.getCategory(),
                         InputConstants.UNKNOWN);
                 MultiKeyBindingEntry subEntry = new MultiKeyBindingEntry(this.parentList, subBinding);

@@ -65,23 +65,19 @@ jobs:
           fi
 
       - name: Extract changelog
-        id: changelog
         run: |
           MOD_ONLY=$(echo "${{ steps.version.outputs.mod_version }}" | cut -d+ -f1)
-          CHANGELOG=$(awk "/^## $MOD_ONLY /{flag=1;next}/^## /{flag=0}flag" CHANGELOG.md | tail -n +2)
-          if [ -z "$CHANGELOG" ]; then
-            CHANGELOG="Release for Minecraft ${{ matrix.branch }}"
+          awk "/^## $MOD_ONLY /{flag=1;next}/^## /{flag=0}flag" CHANGELOG.md | tail -n +2 > release_notes.txt
+          if [ ! -s release_notes.txt ]; then
+            echo "Release for Minecraft ${{ matrix.branch }}" > release_notes.txt
           fi
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create release if needed
         run: |
           if ! gh release view "${{ steps.version.outputs.mod_version }}" >/dev/null 2>&1; then
             gh release create "${{ steps.version.outputs.mod_version }}" \
               --title "Release ${{ steps.version.outputs.mod_version }}" \
-              --notes "${{ steps.changelog.outputs.changelog }}"
+              --notes-file release_notes.txt
           fi
 
       - name: Skip if JAR already exists

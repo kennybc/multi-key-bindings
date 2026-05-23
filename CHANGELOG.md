@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.4 (May 23, 2026)
+
+- Add custom key binding entry for toggling auto-jump
+- Small renaming refactor from "Sticky Toggles" -> just "Toggles"
+
 ## 1.3.3 (May 13, 2026)
 
 - Add custom key binding entries for toggling sticky keys (toggle vs hold)

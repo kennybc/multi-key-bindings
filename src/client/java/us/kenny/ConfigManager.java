@@ -48,7 +48,7 @@ public class ConfigManager {
         try {
             parseConfigFile();
         } finally {
-            StickyToggleManager.ensurePrimaries();
+            ToggleManager.ensurePrimaries();
             isLoading = false;
         }
     }
@@ -95,7 +95,7 @@ public class ConfigManager {
                     // Empty category since unknown at startup, it will be filled in later
                     MultiKeyBindingManager.addKeyBinding(action, null, translationKey, id);
                     if (keyBindingJson.has("primary") && keyBindingJson.get("primary").getAsBoolean()) {
-                        StickyToggleManager.setPrimary(action, id);
+                        ToggleManager.setPrimary(action, id);
                     }
                 }
             }
@@ -156,7 +156,7 @@ public class ConfigManager {
             obj.addProperty("id", binding.getId().toString());
             obj.addProperty("action", binding.getAction());
             obj.addProperty("key", binding.getKey().getName());
-            if (StickyToggleManager.isPrimary(binding)) {
+            if (ToggleManager.isPrimary(binding)) {
                 obj.addProperty("primary", true);
             }
             array.add(obj);

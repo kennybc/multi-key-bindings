@@ -8,7 +8,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.network.chat.Component;
 import us.kenny.MultiKeyBindingManager;
-import us.kenny.StickyToggleManager;
+import us.kenny.ToggleManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
 import us.kenny.core.MultiKeyBindingScreen;
@@ -38,7 +38,7 @@ public class ControllingMultiKeyBindingEntry extends MultiKeyBindingEntry implem
             // entry would be lost on the next filter/sort.
             this.addKeyBindingButton = Button.builder(Component.literal("+"), button -> {
                 MultiKeyBinding subBinding = MultiKeyBindingManager.addKeyBinding(
-                        StickyToggleManager.stripMultiPrefix(multiKeyBinding.getAction()),
+                        ToggleManager.stripMultiPrefix(multiKeyBinding.getAction()),
                         multiKeyBinding.getCategory(),
                         InputConstants.UNKNOWN);
                 ControllingMultiKeyBindingEntry subEntry = new ControllingMultiKeyBindingEntry(parentList,
@@ -57,7 +57,7 @@ public class ControllingMultiKeyBindingEntry extends MultiKeyBindingEntry implem
                 // allEntries is the persistent backing list Controlling rebuilds
                 // from on filter/sort, so the sub must be inserted next to its
                 // primary there too — otherwise a search refresh reorders it to
-                // the end of the sticky section under the wrong parent.
+                // the end of the toggles section under the wrong parent.
                 int allInsertAt = parentList.allEntries.indexOf(this) + 1;
                 while (allInsertAt < parentList.allEntries.size()
                         && parentList.allEntries.get(allInsertAt) instanceof MultiKeyBindingEntry sibling

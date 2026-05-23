@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import us.kenny.KeyEventManager;
 import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
-import us.kenny.StickyToggleManager;
+import us.kenny.ToggleManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.StickyMultiKeyBinding;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -77,8 +77,8 @@ public abstract class KeyMappingMixin {
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             if (ModifierManager.shouldActivate(multiKeyBinding.getId().toString(), multiKeyBinding.getKey())) {
                 String action = multiKeyBinding.getAction();
-                if (StickyToggleManager.isToggleAction(action)) {
-                    StickyToggleManager.flip(action);
+                if (ToggleManager.isToggleAction(action)) {
+                    ToggleManager.flip(action);
                 } else {
                     multiKeyBinding.incrementTimesPressed();
                 }

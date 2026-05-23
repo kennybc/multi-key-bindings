@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import us.kenny.MultiKeyBindingManager;
-import us.kenny.StickyToggleManager;
+import us.kenny.ToggleManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.controlling.ControllingMultiKeyBindingEntry;
 
@@ -24,16 +24,16 @@ public abstract class NewKeyBindsListMixin {
     /**
      * NewKeyBindsList rebuilds its entry list inside its own constructor, wiping
      * anything that was added during the inherited KeyBindsList.<init> pass.
-     * Re-append the sticky-toggle section here using Controlling-aware entries
+     * Re-append the toggles section here using Controlling-aware entries
      * so the remove and "+" buttons go through CustomList.allEntries.
      */
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void addToggleStickyEntries(CallbackInfo ci) {
+    private void addToggleEntries(CallbackInfo ci) {
         CustomList self = (CustomList) (Object) this;
         boolean headerAdded = false;
-        for (String action : StickyToggleManager.STICKY_ACTIONS) {
+        for (String action : ToggleManager.TOGGLE_ACTIONS) {
             Collection<MultiKeyBinding> bindings = MultiKeyBindingManager.getKeyBindings(action);
-            UUID primaryId = StickyToggleManager.getPrimaryId("multi." + action);
+            UUID primaryId = ToggleManager.getPrimaryId("multi." + action);
             MultiKeyBinding primary = primaryId == null ? null
                     : bindings.stream().filter(b -> b.getId().equals(primaryId)).findFirst().orElse(null);
             if (primary == null) {
@@ -41,7 +41,7 @@ public abstract class NewKeyBindsListMixin {
             }
             if (!headerAdded) {
                 ((CustomListAccessor) self).invokeAddEntry(
-                        ((KeyBindsList) self).new CategoryEntry(StickyToggleManager.STICKY_TOGGLES_CATEGORY));
+                        ((KeyBindsList) self).new CategoryEntry(ToggleManager.TOGGLES_CATEGORY));
                 headerAdded = true;
             }
             ControllingMultiKeyBindingEntry primaryEntry = new ControllingMultiKeyBindingEntry(self,
@@ -53,7 +53,7 @@ public abstract class NewKeyBindsListMixin {
                     continue;
                 }
                 if (sub.getCategory() == null) {
-                    sub.setCategory(StickyToggleManager.STICKY_TOGGLES_CATEGORY);
+                    sub.setCategory(ToggleManager.TOGGLES_CATEGORY);
                 }
                 ((CustomListAccessor) self).invokeAddEntry(
                         new ControllingMultiKeyBindingEntry(self, primaryEntry, sub, false));

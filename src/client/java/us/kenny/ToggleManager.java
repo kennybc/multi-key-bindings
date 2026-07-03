@@ -202,6 +202,6 @@ public class ToggleManager {
                 .append(": ")
                 .append(Component.translatable(state ? onKey : offKey)
                         .withStyle(state ? ChatFormatting.GREEN : ChatFormatting.RED));
-        mc.gui.setOverlayMessage(message, false);
+        mc.gui.hud.setOverlayMessage(message, false);
     }
 }

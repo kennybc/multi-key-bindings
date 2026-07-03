@@ -43,7 +43,7 @@ public class KeyboardHandlerMixin {
             int action,
             KeyEvent keyEvent,
             CallbackInfo callbackInfo) {
-        if (action == 0 && Minecraft.getInstance().screen instanceof MultiKeyBindingScreen screen) {
+        if (action == 0 && Minecraft.getInstance().gui.screen() instanceof MultiKeyBindingScreen screen) {
             if (screen.getSelectedKey() != null || screen.getSelectedMultiKeyBinding() != null) {
                 screen.setSelectedKey(null);
                 screen.setSelectedMultiKeyBinding(null);

@@ -41,15 +41,19 @@ jobs:
           FABRIC_ID=$(echo "$GAME_VERSIONS" | jq -r '.[] | select(.name=="Fabric") | .id')
 
           # Fetch all published CurseForge files with pagination
-          PUBLISHED_FILES="[]"
+          PUBLISHED_FILES_FILE=$(mktemp)
+          echo "[]" > "$PUBLISHED_FILES_FILE"
           INDEX=0
           PAGE_SIZE=50
           while true; do
             PAGE=$(curl -s -H "x-api-key: $CURSEFORGE_TOKEN" \
               "https://api.curseforge.com/v1/mods/1364298/files?index=$INDEX&pageSize=$PAGE_SIZE")
-            DATA=$(echo "$PAGE" | jq '.data')
-            PUBLISHED_FILES=$(jq -n --argjson a "$PUBLISHED_FILES" --argjson b "$DATA" '$a + $b')
-            COUNT=$(echo "$DATA" | jq 'length')
+            PAGE_FILE=$(mktemp)
+            echo "$PAGE" | jq '.data' > "$PAGE_FILE"
+            jq -s '.[0] + .[1]' "$PUBLISHED_FILES_FILE" "$PAGE_FILE" > "$PUBLISHED_FILES_FILE.tmp"
+            mv "$PUBLISHED_FILES_FILE.tmp" "$PUBLISHED_FILES_FILE"
+            COUNT=$(jq 'length' "$PAGE_FILE")
+            rm -f "$PAGE_FILE"
             if [ "$COUNT" -lt "$PAGE_SIZE" ]; then
               break
             fi
@@ -61,7 +65,7 @@ jobs:
             echo "Checking release $tag"
 
             # Skip if already published
-            EXISTS=$(echo "$PUBLISHED_FILES" | jq -r ".[] | select(.displayName==\"$tag\") | .id")
+            EXISTS=$(jq -r ".[] | select(.displayName==\"$tag\") | .id" "$PUBLISHED_FILES_FILE")
 
             if [ -n "$EXISTS" ]; then
               echo "Already published to CurseForge: $tag"

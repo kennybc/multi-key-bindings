@@ -240,6 +240,25 @@ public final class ProfileManager {
     }
 
     /**
+     * Build an empty Profile with the vanilla map seeded from each
+     * KeyMapping's default key. No MKB bindings, modifiers, or hidden entries.
+     *
+     * @param name The name to give the new profile.
+     */
+    public static Profile snapshotDefaults(String name) {
+        Profile profile = new Profile(name);
+        JsonObject vanilla = new JsonObject();
+        net.minecraft.client.Options options = MultiKeyBindingManager.getGameOptions();
+        if (options != null) {
+            for (net.minecraft.client.KeyMapping mapping : options.keyMappings) {
+                vanilla.addProperty(mapping.getName(), mapping.getDefaultKey().getName());
+            }
+        }
+        profile.setVanilla(vanilla);
+        return profile;
+    }
+
+    /**
      * Client-init entry point. Migrates any legacy config, then loads the
      * active profile.
      */
@@ -317,6 +336,13 @@ public final class ProfileManager {
         if (profile == null) {
             MultiKeyBindingClient.LOGGER.warn("Profile not found: {}", name);
             return false;
+        }
+
+        // Persist the outgoing profile so any unsaved changes to it survive
+        // the switch. Skip if it's the same profile (no-op) or if there's
+        // nothing to save yet (first-launch bootstrap).
+        if (!name.equalsIgnoreCase(activeProfileName)) {
+            saveActive();
         }
 
         isLoading = true;
@@ -397,7 +423,8 @@ public final class ProfileManager {
     }
 
     /**
-     * Snapshot current state into a new profile file. Does not switch.
+     * Create a new profile with vanilla defaults and no MKB customization.
+     * Does not switch. Use duplicate to copy from an existing profile.
      *
      * @param name The profile name to create.
      */
@@ -409,7 +436,7 @@ public final class ProfileManager {
             return false;
         }
         ensureDirectories();
-        writeProfile(snapshotCurrent(name));
+        writeProfile(snapshotDefaults(name));
         return true;
     }
 

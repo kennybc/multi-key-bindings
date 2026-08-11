@@ -6,5 +6,24 @@
   "multi.toggle.key.attack": "Attack/Destroy Sticky Toggle",
   "multi.toggle.options.autoJump": "Auto-Jump Toggle",
   "multi.toggle.state.on": "Toggle",
-  "multi.toggle.state.off": "Hold"
+  "multi.toggle.state.off": "Hold",
+
+  "multi.profile.menu.new": "+ New profile",
+  "multi.profile.menu.manage": "Manage profiles",
+  "multi.profile.dialog.new.title": "New profile",
+  "multi.profile.dialog.rename.title": "Rename profile",
+  "multi.profile.dialog.hint": "Letters, numbers, - and _ (max 32)",
+  "multi.profile.dialog.create": "Create",
+  "multi.profile.dialog.rename.confirm": "Rename",
+  "multi.profile.dialog.cancel": "Cancel",
+  "multi.profile.manage.title": "Manage Profiles",
+  "multi.profile.manage.set_active": "Set Active",
+  "multi.profile.manage.rename": "Rename",
+  "multi.profile.manage.duplicate": "Duplicate",
+  "multi.profile.manage.delete": "Delete",
+  "multi.profile.manage.new": "Create New Profile",
+  "multi.profile.manage.back": "Back",
+  "multi.profile.manage.active": "active",
+  "multi.profile.manage.confirm_delete.title": "Delete \"%s\"?",
+  "multi.profile.manage.confirm_delete.body": "This cannot be undone."
 }

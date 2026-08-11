@@ -93,27 +93,49 @@ public final class ProfileManager {
      * "default" if the file is missing or malformed.
      */
     static String readActiveFromIndex() {
-        if (!Files.exists(INDEX)) {
-            return DEFAULT_PROFILE;
-        }
-        try (Reader reader = Files.newBufferedReader(INDEX)) {
-            JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json != null && json.has("active_profile")) {
-                return json.get("active_profile").getAsString();
-            }
-        } catch (IOException | RuntimeException e) {
-            MultiKeyBindingClient.LOGGER.error("Failed to read config.json", e);
+        JsonObject json = readIndex();
+        if (json != null && json.has("active_profile")) {
+            return json.get("active_profile").getAsString();
         }
         return DEFAULT_PROFILE;
     }
 
     /**
-     * Atomic write of the index file.
+     * Read the global hidden set from the index file. Returns an empty
+     * set if the field is missing.
+     */
+    static Set<String> readHiddenFromIndex() {
+        Set<String> hidden = new LinkedHashSet<>();
+        JsonObject json = readIndex();
+        if (json != null && json.has("hidden")) {
+            json.getAsJsonArray("hidden").forEach(el -> hidden.add(el.getAsString()));
+        }
+        return hidden;
+    }
+
+    private static JsonObject readIndex() {
+        if (!Files.exists(INDEX)) {
+            return null;
+        }
+        try (Reader reader = Files.newBufferedReader(INDEX)) {
+            return GSON.fromJson(reader, JsonObject.class);
+        } catch (IOException | RuntimeException e) {
+            MultiKeyBindingClient.LOGGER.error("Failed to read config.json", e);
+            return null;
+        }
+    }
+
+    /**
+     * Atomic write of the index file. Persists the active profile plus
+     * the current in-memory global hidden set.
      */
     static void writeIndex(String activeProfile) {
         JsonObject json = new JsonObject();
         json.addProperty("config_version", CONFIG_VERSION);
         json.addProperty("active_profile", activeProfile);
+        JsonArray hidden = new JsonArray();
+        HiddenBindingManager.getAll().forEach(hidden::add);
+        json.add("hidden", hidden);
         atomicWrite(INDEX, GSON.toJson(json));
     }
 
@@ -175,11 +197,6 @@ public final class ProfileManager {
             if (json.has("modifiers")) {
                 profile.setModifiers(json.getAsJsonObject("modifiers"));
             }
-            if (json.has("hidden")) {
-                Set<String> hidden = new LinkedHashSet<>();
-                json.getAsJsonArray("hidden").forEach(el -> hidden.add(el.getAsString()));
-                profile.setHidden(hidden);
-            }
             if (json.has("vanilla")) {
                 profile.setVanilla(json.getAsJsonObject("vanilla"));
             }
@@ -199,9 +216,6 @@ public final class ProfileManager {
         JsonObject json = new JsonObject();
         json.add("bindings", profile.getBindings());
         json.add("modifiers", profile.getModifiers());
-        JsonArray hidden = new JsonArray();
-        profile.getHidden().forEach(hidden::add);
-        json.add("hidden", hidden);
         json.add("vanilla", profile.getVanilla());
         atomicWrite(getProfilePath(profile.getName()), GSON.toJson(json));
     }
@@ -259,12 +273,17 @@ public final class ProfileManager {
     }
 
     /**
-     * Client-init entry point. Migrates any legacy config, then loads the
-     * active profile.
+     * Client-init entry point. Migrates any legacy config, hydrates the
+     * global hidden set, then loads the active profile.
      */
     public static void bootstrap() {
         ensureDirectories();
         migrateLegacyIfPresent();
+
+        // Hydrate global hidden set BEFORE loading a profile so the first
+        // list build sees the filter applied.
+        HiddenBindingManager.setAll(readHiddenFromIndex());
+        HiddenBindingManager.setOnMutated(ProfileManager::persistHiddenSetToIndex);
 
         if (listProfileNames().isEmpty()) {
             // Fresh install: seed a default from current state.
@@ -371,6 +390,17 @@ public final class ProfileManager {
     }
 
     /**
+     * Write the current in-memory hidden set into config.json. Called on
+     * every hide/unhide mutation via HiddenBindingManager's callback.
+     */
+    private static void persistHiddenSetToIndex() {
+        if (isLoading) {
+            return;
+        }
+        writeIndex(activeProfileName);
+    }
+
+    /**
      * Apply the profile's vanilla snapshot to every registered KeyMapping.
      * Missing entries (mod uninstalled since save) are logged and skipped;
      * the profile's record is left intact so a reinstall restores the
@@ -404,22 +434,14 @@ public final class ProfileManager {
 
     /**
      * Snapshot current state and write it to the active profile's file.
-     * Preserves any on-disk hidden set — this is not a hidden-list mutation
-     * path.
+     * The hidden set is global (config.json), not per-profile.
      */
     public static void saveActive() {
         if (isLoading) {
             return;
         }
         ensureDirectories();
-        Profile snapshot = snapshotCurrent(activeProfileName);
-
-        Profile existing = readProfile(activeProfileName);
-        if (existing != null) {
-            snapshot.setHidden(existing.getHidden());
-        }
-
-        writeProfile(snapshot);
+        writeProfile(snapshotCurrent(activeProfileName));
     }
 
     /**

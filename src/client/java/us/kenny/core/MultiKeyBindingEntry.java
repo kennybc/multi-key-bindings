@@ -3,6 +3,8 @@ package us.kenny.core;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Unique;
+import us.kenny.EditVisibilityMode;
+import us.kenny.HiddenBindingManager;
 import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.ToggleManager;
@@ -35,6 +37,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
     private final Button resetButton;
     protected Button removeKeyBindingButton;
     protected Button addKeyBindingButton;
+    protected final Button eyeButton;
 
     /**
      * @see us.kenny.core.controlling.ControllingMultiKeyBindingEntry#setHidden
@@ -109,7 +112,16 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
                     .build();
         }
 
+        this.eyeButton = Button.builder(Component.literal(visibilityLabel()), button -> {
+            HiddenBindingManager.toggle(this.multiKeyBinding.getAction());
+            this.parentList.resetMappingAndUpdateButtons();
+        }).size(60, 20).build();
+
         this.refreshEntry();
+    }
+
+    private String visibilityLabel() {
+        return HiddenBindingManager.isHidden(this.multiKeyBinding.getAction()) ? "Hidden" : "Visible";
     }
 
     @Unique
@@ -128,37 +140,55 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
     @Override
     public void extractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered,
             float deltaTicks) {
-        // Render buttons
+        boolean editMode = EditVisibilityMode.isActive();
+
         int scrollbarX = this.parentList.getRowRight() + 6 + 2;
         int contentX = this.getContentX();
         int contentY = this.getContentY();
         int buttonY = contentY - 2;
 
         int resetButtonX = scrollbarX - this.resetButton.getWidth() - 10;
-        this.resetButton.setPosition(resetButtonX, buttonY);
-        this.resetButton.active = !this.hidden && !this.multiKeyBinding.getKey().equals(InputConstants.UNKNOWN);
-        this.resetButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
-
         int editButtonX = resetButtonX - this.editButton.getWidth() - 5;
-        this.editButton.setPosition(editButtonX, buttonY);
-        this.editButton.active = !this.hidden;
-        this.editButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
 
-        Button button = this.primary ? this.addKeyBindingButton : this.removeKeyBindingButton;
-        int buttonX = editButtonX - button.getWidth() - 5;
-        button.setPosition(buttonX, buttonY);
-        button.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
+        // In edit mode we render just a Visible/Hidden toggle on primary
+        // rows and skip the edit/reset buttons entirely.
+        if (editMode) {
+            if (this.primary) {
+                this.eyeButton.setMessage(Component.literal(visibilityLabel()));
+                int buttonX = resetButtonX + this.resetButton.getWidth() - this.eyeButton.getWidth();
+                this.eyeButton.setPosition(buttonX, buttonY);
+                this.eyeButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
+            }
+        } else {
+            this.resetButton.setPosition(resetButtonX, buttonY);
+            this.resetButton.active = !this.hidden
+                    && !this.multiKeyBinding.getKey().equals(InputConstants.UNKNOWN);
+            this.resetButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
+
+            this.editButton.setPosition(editButtonX, buttonY);
+            this.editButton.active = !this.hidden;
+            this.editButton.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
+
+            Button button = this.primary ? this.addKeyBindingButton : this.removeKeyBindingButton;
+            int buttonX = editButtonX - button.getWidth() - 5;
+            button.setPosition(buttonX, buttonY);
+            button.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
+        }
 
         if (this.duplicate) {
-            int stripeLeft = this.editButton.getX() - 6;
+            int anchorX = editMode ? this.eyeButton.getX() : this.editButton.getX();
+            int stripeLeft = anchorX - 6;
             graphics.fill(stripeLeft, this.getContentY() - 1, stripeLeft + 3, this.getContentBottom(), -256);
         }
 
         if (this.primary) {
             // Primary rows are top-level: render the action name on the left.
             Font font = Minecraft.getInstance().font;
+            int color = (editMode && HiddenBindingManager.isHidden(this.multiKeyBinding.getAction()))
+                    ? 0xFF888888
+                    : -1;
             graphics.text(font, Component.translatable(this.multiKeyBinding.getTranslationKey()), contentX,
-                    this.getContentYMiddle() - font.lineHeight / 2, -1);
+                    this.getContentYMiddle() - font.lineHeight / 2, color);
         } else {
             // Sub rows are indented under a parent: render an arrow instead of action name.
             int leftOffset = 10;
@@ -252,13 +282,18 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
      */
     @Override
     public List<? extends GuiEventListener> children() {
-        Button button = this.primary ? this.addKeyBindingButton : this.removeKeyBindingButton;
-        return ImmutableList.of(this.editButton, this.resetButton, button);
+        return ImmutableList.of(this.editButton, this.resetButton, rowActionButton());
     }
 
     @Override
     public List<? extends NarratableEntry> narratables() {
-        Button button = this.primary ? this.addKeyBindingButton : this.removeKeyBindingButton;
-        return ImmutableList.of(this.editButton, this.resetButton, button);
+        return ImmutableList.of(this.editButton, this.resetButton, rowActionButton());
+    }
+
+    private Button rowActionButton() {
+        if (EditVisibilityMode.isActive() && this.primary) {
+            return this.eyeButton;
+        }
+        return this.primary ? this.addKeyBindingButton : this.removeKeyBindingButton;
     }
 }

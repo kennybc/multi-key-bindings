@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import us.kenny.HiddenBindingManager;
 import us.kenny.KeyEventManager;
 import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
@@ -243,6 +244,11 @@ public abstract class KeyMappingMixin {
 
     @Inject(method = "same", at = @At("HEAD"), cancellable = true)
     private void onSame(KeyMapping other, CallbackInfoReturnable<Boolean> cir) {
+        if (HiddenBindingManager.isHidden(this.getName())
+                || HiddenBindingManager.isHidden(other.getName())) {
+            cir.setReturnValue(false);
+            return;
+        }
         if (!ModifierManager.modifiersEqual(
                 ModifierManager.getModifiers(this.getName()),
                 ModifierManager.getModifiers(other.getName()))) {

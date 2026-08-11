@@ -27,6 +27,11 @@
   "multi.profile.manage.confirm_delete.title": "Delete \"%s\"?",
   "multi.profile.manage.confirm_delete.body": "This cannot be undone.",
 
+  "multi.visibility.tooltip": "Edit binding visibility",
+  "multi.visibility.tooltip.exit": "Exit edit mode",
+  "multi.visibility.banner": "Click Visible / Hidden to toggle a binding",
+  "multi.visibility.hidden_count": "%d hidden — enable Edit Visibility to show",
+
   "multi.profile.command.status.title": "Multi Key Bindings",
   "multi.profile.command.status.version": "Version: %s",
   "multi.profile.command.status.active": "Active profile: %s",

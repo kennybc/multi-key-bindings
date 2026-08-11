@@ -161,4 +161,13 @@ public class MultiKeyBindingManager {
             return v;
         });
     }
+
+    /**
+     * Clear every registered custom key binding. Called during profile load.
+     */
+    public static void clearAll() {
+        ID_TO_BINDING.clear();
+        ACTION_TO_BINDINGS.clear();
+        KEY_TO_BINDINGS.clear();
+    }
 }

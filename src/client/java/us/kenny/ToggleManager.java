@@ -118,6 +118,14 @@ public class ToggleManager {
     }
 
     /**
+     * Forget every remembered primary binding. Called during profile load,
+     * before ensurePrimaries repopulates from the loaded config.
+     */
+    public static void clearAll() {
+        PRIMARIES.clear();
+    }
+
+    /**
      * Ensure each toggle action has a designated primary binding. Called after
      * config load so primaries persist across launches under their original
      * UUIDs, preserving any modifier chord stored against that UUID.

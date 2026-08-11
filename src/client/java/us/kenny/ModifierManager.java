@@ -192,4 +192,11 @@ public class ModifierManager {
     public static Map<String, List<InputConstants.Key>> getAllModifiers() {
         return Collections.unmodifiableMap(KEY_MODIFIERS);
     }
+
+    /**
+     * Clear every configured modifier chord. Called during profile load.
+     */
+    public static void clearAll() {
+        KEY_MODIFIERS.clear();
+    }
 }

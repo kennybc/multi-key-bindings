@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.loader.api.FabricLoader;
 import us.kenny.core.MultiKeyBinding;
+import us.kenny.core.profile.Profile;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -26,99 +27,62 @@ public class ConfigManager {
     public static boolean isLoading = false;
 
     /**
-     * Save all custom key bindings to a config file.
+     * Save the active profile's file. Short-circuits during load flows to
+     * avoid re-entering save when Options#save triggers our OptionsMixin.
      */
     public static void saveConfigFile() {
-        try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
-            JsonObject json = new JsonObject();
-            json.addProperty("config_version", CONFIG_VERSION);
-            json.add("bindings", getFormattedKeyBindings());
-            json.add("modifiers", getFormattedModifiers());
-            GSON.toJson(json, writer);
-        } catch (IOException e) {
-            MultiKeyBindingClient.LOGGER.error("Failed to save keybindings config", e);
+        if (isLoading || ProfileManager.isLoading()) {
+            return;
         }
+        ProfileManager.saveActive();
     }
 
     /**
-     * Load custom key bindings from a config file. If config version is outdated,
-     * attempt to migrate to latest config file format.
+     * Client-init entry point. Runs the v3→v4 filesystem migration if
+     * applicable, then loads the active profile.
      */
     public static void loadConfigFile() {
+        isLoading = true;
         try {
-            parseConfigFile();
+            ProfileManager.bootstrap();
         } finally {
             ToggleManager.ensurePrimaries();
             isLoading = false;
         }
     }
 
-    private static void parseConfigFile() {
-        if (!Files.exists(CONFIG_PATH)) {
-            return;
+    /**
+     * Populate the modifier and binding managers from a profile. Callers
+     * must clear the managers first.
+     */
+    static void applyStateFromProfile(Profile profile) {
+        for (var entry : profile.getModifiers().entrySet()) {
+            List<InputConstants.Key> modifiers = parseModifiers(entry.getValue().getAsJsonArray());
+            if (!modifiers.isEmpty()) {
+                ModifierManager.setModifiers(entry.getKey(), modifiers);
+            }
         }
-
-        boolean migrated = false;
-
-        try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
-            JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json == null) {
-                return;
+        for (JsonElement element : profile.getBindings()) {
+            JsonObject keyBindingJson = element.getAsJsonObject();
+            UUID id = UUID.fromString(keyBindingJson.get("id").getAsString());
+            String action = keyBindingJson.get("action").getAsString();
+            String translationKey = keyBindingJson.get("key").getAsString();
+            MultiKeyBindingManager.addKeyBinding(action, null, translationKey, id);
+            if (keyBindingJson.has("primary") && keyBindingJson.get("primary").getAsBoolean()) {
+                ToggleManager.setPrimary(action, id);
             }
-
-            int version = json.has("config_version") ? json.get("config_version").getAsInt() : 1;
-            if (version < CONFIG_VERSION) {
-                MultiKeyBindingClient.LOGGER.info("Config version outdated (found v{}, expected v{}). Upgrading...",
-                        version, CONFIG_VERSION);
-                json = migrateConfig(json, version);
-                migrated = true;
-            }
-
-            // Load modifiers before bindings so MultiKeyBinding constructors see their full
-            // modifier state via ModifierManager.
-            if (json.has("modifiers")) {
-                for (var entry : json.getAsJsonObject("modifiers").entrySet()) {
-                    List<InputConstants.Key> modifiers = parseModifiers(entry.getValue().getAsJsonArray());
-                    if (!modifiers.isEmpty()) {
-                        ModifierManager.setModifiers(entry.getKey(), modifiers);
-                    }
-                }
-            }
-
-            if (json.has("bindings")) {
-                for (JsonElement element : json.getAsJsonArray("bindings")) {
-                    JsonObject keyBindingJson = element.getAsJsonObject();
-                    UUID id = UUID.fromString(keyBindingJson.get("id").getAsString());
-                    String action = keyBindingJson.get("action").getAsString();
-                    String translationKey = keyBindingJson.get("key").getAsString();
-
-                    // Empty category since unknown at startup, it will be filled in later
-                    MultiKeyBindingManager.addKeyBinding(action, null, translationKey, id);
-                    if (keyBindingJson.has("primary") && keyBindingJson.get("primary").getAsBoolean()) {
-                        ToggleManager.setPrimary(action, id);
-                    }
-                }
-            }
-
-            if (migrated) {
-                try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
-                    GSON.toJson(json, writer);
-                } catch (IOException e) {
-                    MultiKeyBindingClient.LOGGER.error("Failed to save migrated keybindings config", e);
-                }
-            }
-        } catch (IOException e) {
-            MultiKeyBindingClient.LOGGER.error("Failed to load config", e);
         }
     }
 
     /**
-     * Migrate a config JSON object to latest format.
+     * Migrate a legacy JSON config to v3 shape. Preserved as a helper for
+     * the v3 -> v4 migration in ProfileManager, which can still
+     * inherit older on-disk configs.
      *
      * @param json    The config to migrate.
      * @param version The version of the config we are migrating from.
      */
-    private static JsonObject migrateConfig(JsonObject json, int version) {
+    static JsonObject migrateJsonToV3(JsonObject json, int version) {
         JsonObject newConfig = new JsonObject();
         newConfig.addProperty("config_version", CONFIG_VERSION);
         JsonArray newKeyBindings = new JsonArray();
@@ -149,7 +113,7 @@ public class ConfigManager {
     /**
      * Get all custom key bindings formatted as a JSON array for storage.
      */
-    private static JsonArray getFormattedKeyBindings() {
+    static JsonArray getFormattedKeyBindings() {
         JsonArray array = new JsonArray();
         for (MultiKeyBinding binding : MultiKeyBindingManager.getKeyBindings()) {
             JsonObject obj = new JsonObject();
@@ -168,7 +132,7 @@ public class ConfigManager {
      * Get all modifier entries (action name or binding UUID -> modifier list) as a
      * JSON object.
      */
-    private static JsonObject getFormattedModifiers() {
+    static JsonObject getFormattedModifiers() {
         JsonObject obj = new JsonObject();
         for (var entry : ModifierManager.getAllModifiers().entrySet()) {
             obj.add(entry.getKey(), serializeModifiers(entry.getValue()));

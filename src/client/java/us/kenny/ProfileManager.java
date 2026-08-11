@@ -423,8 +423,8 @@ public final class ProfileManager {
     }
 
     /**
-     * Create a new profile with vanilla defaults and no MKB customization.
-     * Does not switch. Use duplicate to copy from an existing profile.
+     * Create a new profile with vanilla defaults and no MKB customization,
+     * then switch to it. Use duplicate to copy from an existing profile.
      *
      * @param name The profile name to create.
      */
@@ -437,6 +437,7 @@ public final class ProfileManager {
         }
         ensureDirectories();
         writeProfile(snapshotDefaults(name));
+        load(name);
         return true;
     }
 

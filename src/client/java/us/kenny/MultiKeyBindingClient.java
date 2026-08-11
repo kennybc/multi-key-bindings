@@ -6,6 +6,8 @@ import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import us.kenny.command.MkbCommand;
+
 public class MultiKeyBindingClient implements ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("multi-key-bindings");
 
@@ -16,5 +18,6 @@ public class MultiKeyBindingClient implements ClientModInitializer {
         } else {
             LOGGER.info("Starting multi-key-bindings!");
         }
+        MkbCommand.register();
     }
 }

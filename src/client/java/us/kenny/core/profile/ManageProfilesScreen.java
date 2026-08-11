@@ -102,9 +102,11 @@ public final class ManageProfilesScreen extends Screen {
             return;
         }
         ProfileManager.load(sel.name);
+        // Stay on the same screen but rebuild against a fresh KeyBindsScreen so that
+        // Back returns to a screen reflecting the new active profile.
         OptionsSubScreenAccessor accessor = (OptionsSubScreenAccessor) (Object) parent;
-        Minecraft.getInstance().setScreenAndShow(
-                new KeyBindsScreen(accessor.getLastScreen(), accessor.getOptions()));
+        KeyBindsScreen freshParent = new KeyBindsScreen(accessor.getLastScreen(), accessor.getOptions());
+        Minecraft.getInstance().setScreenAndShow(new ManageProfilesScreen(freshParent));
     }
 
     private void openNewDialog() {

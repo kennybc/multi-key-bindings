@@ -52,7 +52,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
     @Unique
     private Button addKeyBindingButton;
     @Unique
-    private Button eyeButton;
+    private Button toggleVisibilityButton;
     @Unique
     private KeyBindsList keyBindsList;
     @Unique
@@ -91,7 +91,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
                 .size(20, 20)
                 .build();
 
-        this.eyeButton = Button.builder(Component.literal(visibilityLabel()), (button) -> {
+        this.toggleVisibilityButton = Button.builder(Component.literal(visibilityLabel()), (button) -> {
             this.self.setFocused(false);
             HiddenBindingManager.toggle(this.key.getName());
             this.keyBindsList.resetMappingAndUpdateButtons();
@@ -107,7 +107,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
 
     @Unique
     private Button rowActionButton() {
-        return EditVisibilityMode.isActive() ? this.eyeButton : this.addKeyBindingButton;
+        return EditVisibilityMode.isActive() ? this.toggleVisibilityButton : this.addKeyBindingButton;
     }
 
     /**
@@ -131,7 +131,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
         int buttonY = this.getContentY() - 2;
 
         if (editMode) {
-            this.eyeButton.setMessage(Component.literal(visibilityLabel()));
+            this.toggleVisibilityButton.setMessage(Component.literal(visibilityLabel()));
         }
 
         button.setPosition(buttonX, buttonY);
@@ -248,11 +248,17 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
      */
     @Override
     public List<? extends GuiEventListener> children() {
+        if (EditVisibilityMode.isActive()) {
+            return ImmutableList.of(rowActionButton());
+        }
         return ImmutableList.of(this.changeButton, this.resetButton, rowActionButton());
     }
 
     @Override
     public List<? extends NarratableEntry> narratables() {
+        if (EditVisibilityMode.isActive()) {
+            return ImmutableList.of(rowActionButton());
+        }
         return ImmutableList.of(this.changeButton, this.resetButton, rowActionButton());
     }
 }

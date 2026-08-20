@@ -6,6 +6,7 @@ import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,10 +14,13 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import us.kenny.EditVisibilityMode;
+import us.kenny.HiddenBindingManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
 import us.kenny.core.controlling.ControllingHideableKeyEntry;
+import us.kenny.mixin.KeyMappingAccessor;
 
 import java.util.Collection;
 import java.util.function.Predicate;
@@ -36,14 +40,26 @@ public abstract class DisplayModeMixin {
     @Redirect(method = "<clinit>()V", at = @At(value = "NEW", ordinal = 2, target = "Lcom/blamejared/controlling/api/DisplayMode;<init>(Ljava/lang/String;ILjava/util/function/Predicate;)Lcom/blamejared/controlling/api/DisplayMode;"))
     private static DisplayMode onConflicting(String name, int id, Predicate<KeyEntry> predicate) {
         return init(name, id, entry -> {
+            KeyMapping thisKey = entry.getKey();
+
             for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
                 if (!mkb.getKey().equals(InputConstants.UNKNOWN) &&
                         mkb.getKey().getName()
-                                .equals(entry.getKey().saveString())) {
+                                .equals(thisKey.getName())) {
                     return true;
                 }
             }
-            return predicate.test(entry);
+
+            for (KeyMapping thatKey : Minecraft.getInstance().options.keyMappings) {
+                if (!thatKey.isUnbound() && !HiddenBindingManager.isHidden(thatKey.getName())
+                        && !thatKey.getName().equals(thisKey.getName())
+                        && ((KeyMappingAccessor) thatKey).getBoundKey()
+                                .getValue() == ((KeyMappingAccessor) thisKey).getBoundKey().getValue()) {
+                    return true;
+                }
+            }
+
+            return false;
         });
     }
 
@@ -97,14 +113,22 @@ public abstract class DisplayModeMixin {
 
         // Wrap original predicate
         return entry -> {
+            boolean editMode = EditVisibilityMode.isActive();
+
             // Apply filter to custom MultiKeyBinding
             if (entry instanceof MultiKeyBindingEntry multiKeyBindingEntry) {
                 MultiKeyBinding multiKeyBinding = multiKeyBindingEntry.getMultiKeyBinding();
+                if (!editMode && HiddenBindingManager.isHidden(multiKeyBinding.getAction())) {
+                    return false;
+                }
                 return testMultiKeyBinding(multiKeyBinding);
             }
 
             // Include original entry if any associated MultiKeyBinding passes the filter
             if (entry instanceof KeyEntry keyEntry) {
+                if (!editMode && HiddenBindingManager.isHidden(keyEntry.getKey().getName())) {
+                    return false;
+                }
                 if (entry instanceof ControllingHideableKeyEntry hideableKeyEntry) {
                     if (!original.test(keyEntry)) {
                         hideableKeyEntry.setHidden(true);

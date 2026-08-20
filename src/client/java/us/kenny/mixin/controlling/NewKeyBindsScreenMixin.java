@@ -8,32 +8,61 @@ import com.blamejared.controlling.client.NewKeyBindsScreen;
 import com.blamejared.searchables.api.SearchableType;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.SpriteIconButton;
+import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.*;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import us.kenny.EditVisibilityMode;
+import us.kenny.ProfileManager;
 import us.kenny.ToggleManager;
 import us.kenny.core.MultiKeyBindingEntry;
 import us.kenny.core.MultiKeyBindingScreen;
 import us.kenny.core.MultiKeyBindingScreenHelper;
+import us.kenny.core.profile.ManageProfilesScreen;
+import us.kenny.core.profile.ProfileNameDialog;
+import us.kenny.core.profile.ProfilePopupMenu;
 import us.kenny.core.controlling.ControllingHideableKeyEntry;
 import us.kenny.core.controlling.ControllingMultiKeyBindingEntry;
+import us.kenny.mixin.OptionsSubScreenAccessor;
 
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 @Mixin(value = NewKeyBindsScreen.class, remap = false)
-public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
+public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen  {
+
     @Shadow
     private SortOrder sortOrder;
+
+    @Shadow
+    private Button buttonNone;
+
+    @Shadow
+    private Button buttonConflicting;
+
+    @Shadow
+    private Button buttonSort;
+
+    @Shadow
+    public abstract Button resetButton();
 
     @Shadow
     public abstract KeyBindsList getKeyBindsList();
@@ -41,8 +70,147 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
     @Shadow
     protected abstract CustomList getCustomList();
 
+    @Unique
+    private Button mkbProfileButton;
+    @Unique
+    private Button mkbEditVisibilityButton;
+    @Unique
+    private ProfilePopupMenu mkbProfilePopupMenu;
+    @Unique
+    private static final Identifier VISIBILITY_ICON = Identifier.fromNamespaceAndPath("multi-key-bindings",
+            "icon/visibility");
+    @Unique
+    private static final Identifier VISIBILITY_EXIT_ICON = Identifier.fromNamespaceAndPath("multi-key-bindings",
+            "icon/visibility_exit");
+    /**
+     * See KeyBindsScreenMixin.skipVisibilityReset for the rationale.
+     */
+    @Unique
+    private static boolean skipVisibilityReset = false;
+
     public NewKeyBindsScreenMixin(Screen screen, Options settings) {
         super(screen, settings);
+    }
+
+    /**
+     * Reset edit-visibility mode on any fresh entry into Controlling's screen
+     * (except mid-toggle swap).
+     */
+    @Inject(method = "addFooter", at = @At("HEAD"), remap = true)
+    private void resetMkbVisibilityOnEnter(CallbackInfo ci) {
+        if (skipVisibilityReset) {
+            skipVisibilityReset = false;
+        } else {
+            EditVisibilityMode.setActive(false);
+        }
+    }
+
+    @Inject(method = "addFooter", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/layouts/HeaderAndFooterLayout;addToFooter(Lnet/minecraft/client/gui/layouts/LayoutElement;)Lnet/minecraft/client/gui/layouts/LayoutElement;", remap = true), cancellable = true, remap = true)
+    private void customFooter(CallbackInfo ci, @Local Button toggleFreeButton) {
+        boolean editing = EditVisibilityMode.isActive();
+        Identifier icon = editing ? VISIBILITY_EXIT_ICON : VISIBILITY_ICON;
+        Component tooltip = Component.translatable(
+                editing ? "multi.visibility.tooltip.exit" : "multi.visibility.tooltip");
+
+        this.mkbEditVisibilityButton = SpriteIconButton.builder(tooltip, b -> toggleMkbEditVisibility(), true)
+                .size(20, 20)
+                .sprite(icon, 16, 16)
+                .build();
+        this.mkbProfileButton = Button.builder(mkbDropdownLabel(), b -> openMkbProfileMenu())
+                .bounds(0, 0, 80, 20)
+                .build();
+
+        Button resetButton = this.resetButton();
+        resetButton.setWidth(98);
+        Button doneButton = Button.builder(CommonComponents.GUI_DONE, b -> this.onClose())
+                .size(98, 20)
+                .build();
+
+        LinearLayout container = (LinearLayout)this.layout.addToFooter(LinearLayout.vertical());
+        container.spacing(4);
+
+        LinearLayout top = container.addChild(LinearLayout.horizontal());
+        top.spacing(4);
+        top.addChild(toggleFreeButton);
+        top.addChild(this.buttonSort);
+        top.addChild(this.buttonNone);
+        top.addChild(this.buttonConflicting);
+
+        LinearLayout bottom = container.addChild(LinearLayout.horizontal());
+        bottom.spacing(4);
+        bottom.addChild(this.mkbEditVisibilityButton);
+        bottom.addChild(this.mkbProfileButton);
+        bottom.addChild(resetButton);
+        bottom.addChild(doneButton);
+        ci.cancel();
+    }
+
+    @Unique
+    private void toggleMkbEditVisibility() {
+        EditVisibilityMode.toggle();
+        closeMkbProfileMenu();
+        skipVisibilityReset = true;
+        OptionsSubScreenAccessor accessor = (OptionsSubScreenAccessor) this;
+        Minecraft.getInstance().setScreenAndShow(
+                new NewKeyBindsScreen(accessor.getLastScreen(), accessor.getOptions()));
+    }
+
+    @Unique
+    private void openMkbProfileMenu() {
+        closeMkbProfileMenu();
+        this.mkbProfilePopupMenu = new ProfilePopupMenu(
+                this.mkbProfileButton.getX(),
+                this.mkbProfileButton.getY() + this.mkbProfileButton.getHeight(),
+                this::switchMkbProfile,
+                this::openMkbNewProfileDialog,
+                this::openMkbManageProfiles);
+    }
+
+    @Unique
+    private void closeMkbProfileMenu() {
+        this.mkbProfilePopupMenu = null;
+    }
+
+    @Unique
+    private void switchMkbProfile(String name) {
+        ProfileManager.load(name);
+        closeMkbProfileMenu();
+        OptionsSubScreenAccessor accessor = (OptionsSubScreenAccessor) this;
+        Minecraft.getInstance().setScreenAndShow(
+                new NewKeyBindsScreen(accessor.getLastScreen(), accessor.getOptions()));
+    }
+
+    @Unique
+    private void openMkbNewProfileDialog() {
+        closeMkbProfileMenu();
+        Minecraft.getInstance().setScreenAndShow(new ProfileNameDialog(
+                this,
+                Component.translatable("multi.profile.dialog.new.title"),
+                Component.translatable("multi.profile.dialog.create"),
+                "",
+                name -> {
+                    ProfileManager.create(name);
+                    Minecraft.getInstance().setScreenAndShow(this);
+                }));
+    }
+
+    @Unique
+    private void openMkbManageProfiles() {
+        closeMkbProfileMenu();
+        Minecraft.getInstance().setScreenAndShow(new ManageProfilesScreen((KeyBindsScreen) (Object) this));
+    }
+
+    @Unique
+    private Component mkbDropdownLabel() {
+        return Component.literal(ProfileManager.getActiveProfileName() + " ▼");
+    }
+
+    @Inject(method = "extractRenderState", at = @At("TAIL"), remap = false)
+    private void renderMkbPopup(net.minecraft.client.gui.GuiGraphicsExtractor gfx, int mouseX, int mouseY,
+            float partialTicks, CallbackInfo ci) {
+        if (mkbProfilePopupMenu != null) {
+            mkbProfilePopupMenu.render(gfx, mouseX, mouseY);
+        }
     }
 
     /**
@@ -50,6 +218,15 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
      */
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true, remap = false)
     public void onMouseClicked(MouseButtonEvent mouseButtonEvent, boolean bl, CallbackInfoReturnable<Boolean> cir) {
+        if (mkbProfilePopupMenu != null) {
+            boolean consumed = mkbProfilePopupMenu.mouseClicked(
+                    mouseButtonEvent.x(), mouseButtonEvent.y(), mouseButtonEvent.button());
+            if (!consumed && !mkbProfilePopupMenu.containsPoint(mouseButtonEvent.x(), mouseButtonEvent.y())) {
+                closeMkbProfileMenu();
+            }
+            cir.setReturnValue(true);
+            return;
+        }
         if (MultiKeyBindingScreenHelper.handleMouseClicked((MultiKeyBindingScreen) this, this.getKeyBindsList(),
                 mouseButtonEvent)) {
             cir.setReturnValue(true);
@@ -163,6 +340,28 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
             }
         }
 
-        return rebuilt;
+        return pruneEmptyCategories(rebuilt);
+    }
+
+    /**
+     * Drop any CategoryEntry immediately followed by another CategoryEntry
+     * or the end of the list — meaning every entry it grouped was filtered
+     * out.
+     */
+    @Unique
+    private List<KeyBindsList.Entry> pruneEmptyCategories(List<KeyBindsList.Entry> entries) {
+        List<KeyBindsList.Entry> kept = new ArrayList<>(entries.size());
+        for (int i = 0; i < entries.size(); i++) {
+            KeyBindsList.Entry entry = entries.get(i);
+            if (entry instanceof KeyBindsList.CategoryEntry) {
+                boolean hasContent = i + 1 < entries.size()
+                        && !(entries.get(i + 1) instanceof KeyBindsList.CategoryEntry);
+                if (!hasContent) {
+                    continue;
+                }
+            }
+            kept.add(entry);
+        }
+        return kept;
     }
 }

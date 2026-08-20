@@ -123,15 +123,13 @@ public abstract class KeyBindsScreenMixin extends Screen implements MultiKeyBind
 
         this.resetButton.setWidth(FOOTER_BUTTON_WIDTH);
 
-        // Compact icon button on the far left. Icon + tooltip flip when
-        // edit-visibility mode is active.
         boolean editing = EditVisibilityMode.isActive();
         Identifier icon = editing ? VISIBILITY_EXIT_ICON : VISIBILITY_ICON;
         Component tooltip = Component.translatable(
                 editing ? "multi.visibility.tooltip.exit" : "multi.visibility.tooltip");
         this.editVisibilityButton = SpriteIconButton.builder(
                 tooltip,
-                b -> toggleEditVisibility(),
+                b -> toggleEditVisibilityMode(),
                 true)
                 .size(20, 20)
                 .sprite(icon, 16, 16)
@@ -145,8 +143,8 @@ public abstract class KeyBindsScreenMixin extends Screen implements MultiKeyBind
     }
 
     /**
-     * Shrink the Done button to match the other two before it enters the
-     * footer row.
+     * Shrink the Done button to match the other two before it enters the footer
+     * row.
      */
     @WrapOperation(method = "addFooter", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/layouts/LinearLayout;addChild(Lnet/minecraft/client/gui/layouts/LayoutElement;)Lnet/minecraft/client/gui/layouts/LayoutElement;", ordinal = 1))
     private LayoutElement shrinkDone(LinearLayout row, LayoutElement doneElement, Operation<LayoutElement> original) {
@@ -157,39 +155,17 @@ public abstract class KeyBindsScreenMixin extends Screen implements MultiKeyBind
     }
 
     /**
-     * Render the popup menu (if open) and the Edit Visibility banner or
-     * hidden-count row.
+     * Render the popup menu if open.
      */
     @Inject(method = "extractRenderState", at = @At("TAIL"))
     private void onRender(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTicks, CallbackInfo ci) {
-        renderVisibilityStatus(gfx);
         if (profilePopupMenu != null) {
             profilePopupMenu.render(gfx, mouseX, mouseY);
         }
     }
 
     @Unique
-    private void renderVisibilityStatus(GuiGraphicsExtractor gfx) {
-        int listTop = this.keyBindsList.getY();
-        int textY = listTop - 12;
-        var font = Minecraft.getInstance().font;
-
-        if (EditVisibilityMode.isActive()) {
-            Component banner = Component.translatable("multi.visibility.banner");
-            gfx.text(font, banner,
-                    this.width / 2 - font.width(banner) / 2, textY, 0xFFFFC857);
-        } else {
-            int hiddenCount = HiddenBindingManager.size();
-            if (hiddenCount > 0) {
-                Component msg = Component.translatable("multi.visibility.hidden_count", hiddenCount);
-                gfx.text(font, msg,
-                        this.width / 2 - font.width(msg) / 2, textY, 0xFF999999);
-            }
-        }
-    }
-
-    @Unique
-    private void toggleEditVisibility() {
+    private void toggleEditVisibilityMode() {
         EditVisibilityMode.toggle();
         closeProfileMenu();
         // Full screen swap so the list rebuilds against the new mode

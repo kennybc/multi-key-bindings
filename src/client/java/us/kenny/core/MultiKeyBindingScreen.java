@@ -1,19 +1,145 @@
 package us.kenny.core;
 
+import com.blamejared.controlling.client.NewKeyBindsScreen;
+import com.mojang.blaze3d.platform.InputConstants;
+
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.util.Util;
+
+import us.kenny.ModifierManager;
+import us.kenny.MultiKeyBindingManager;
+import us.kenny.mixin.KeyMappingAccessor;
+
+import java.util.List;
+import java.util.function.Consumer;
 
 /**
- * This is for tracking the selected custom key binding so we can modify it
- * through the options screen.
+ * Shared logic for handling key/mouse input while a binding is being captured
+ * on a key binds screen. Used by the vanilla mixin and the Controlling mixin so
+ * that both screens behave identically.
+ * 
+ * @see KeyBindsScreen
+ * @see NewKeyBindsScreen
  */
-public interface MultiKeyBindingScreen {
-    void setSelectedKey(KeyMapping keyMapping);
+public final class MultiKeyBindingScreenHelper {
+    private MultiKeyBindingScreenHelper() {
+    }
 
-    void setSelectedMultiKeyBinding(MultiKeyBinding multiKeyBinding);
+    /**
+     * Handle a mouse click while a binding is being captured.
+     *
+     * @param screen           The key binding screen.
+     * @param list             The list widget.
+     * @param mouseButtonEvent The mouse button event.
+     * @return True if the click was consumed to assign a multi-key binding.
+     */
+    public static boolean handleMouseClicked(MultiKeyBindingScreen screen, KeyBindsList list,
+            MouseButtonEvent mouseButtonEvent) {
+        InputConstants.Key pressedKey = InputConstants.Type.MOUSE.getOrCreate(mouseButtonEvent.button());
+        KeyMapping selectedKey = screen.getSelectedKey();
+        MultiKeyBinding selectedMultiKeyBinding = screen.getSelectedMultiKeyBinding();
 
-    void setLastKeySelection(long time);
+        if (selectedKey != null) {
+            ModifierManager.addModifier(selectedKey.getName(),
+                    ((KeyMappingAccessor) selectedKey).getBoundKey());
+        }
 
-    KeyMapping getSelectedKey();
+        if (selectedMultiKeyBinding != null) {
+            ModifierManager.addModifier(selectedMultiKeyBinding.getId().toString(),
+                    selectedMultiKeyBinding.getKey());
+            MultiKeyBindingManager.setKeyBinding(selectedMultiKeyBinding, pressedKey);
+            screen.setSelectedMultiKeyBinding(null);
+            list.resetMappingAndUpdateButtons();
+            return true;
+        }
+        return false;
+    }
 
-    MultiKeyBinding getSelectedMultiKeyBinding();
+    /**
+     * Handle a key press while a binding is being captured.
+     *
+     * @param screen   The key binding screen.
+     * @param list     The list widget.
+     * @param keyEvent The key event.
+     * @return True if the key was consumed. Escape on a vanilla selectedKey is
+     *         not consumed so vanilla's own escape handling runs; escape on a
+     *         multi-binding is consumed to prevent the screen from closing.
+     */
+    public static boolean handleKeyPressed(MultiKeyBindingScreen screen, KeyBindsList list, KeyEvent keyEvent) {
+        InputConstants.Key pressedKey = InputConstants.getKey(keyEvent);
+        KeyMapping selectedKey = screen.getSelectedKey();
+        MultiKeyBinding selectedMultiKeyBinding = screen.getSelectedMultiKeyBinding();
+
+        // 🆕 NEW: Check für Ü-Taste (GRAVE/Backtick) zum Toggen der + Buttons
+        if (pressedKey.equals(InputConstants.Key.named("key.grave"))) {
+            MultiKeyBindingEntry.toggleAddButtonsVisibility();
+            list.resetMappingAndUpdateButtons();
+            return true; // Taste wurde verbraucht
+        }
+
+        if (keyEvent.isEscape()) {
+            if (selectedKey != null) {
+                selectedKey.setKey(InputConstants.UNKNOWN);
+            }
+            if (selectedMultiKeyBinding != null) {
+                MultiKeyBindingManager.setKeyBinding(selectedMultiKeyBinding, InputConstants.UNKNOWN);
+                ModifierManager.setModifiers(selectedMultiKeyBinding.getId().toString(), List.of());
+                screen.setSelectedMultiKeyBinding(null);
+                list.resetMappingAndUpdateButtons();
+                return true;
+            }
+            return false;
+        }
+
+        boolean handled = false;
+        if (selectedKey != null) {
+            applyKeyPress(
+                    selectedKey.getName(),
+                    ((KeyMappingAccessor) selectedKey).getBoundKey(),
+                    pressedKey,
+                    selectedKey::setKey);
+            handled = true;
+        }
+        if (selectedMultiKeyBinding != null) {
+            applyKeyPress(
+                    selectedMultiKeyBinding.getId().toString(),
+                    selectedMultiKeyBinding.getKey(),
+                    pressedKey,
+                    key -> MultiKeyBindingManager.setKeyBinding(selectedMultiKeyBinding, key));
+            handled = true;
+        }
+
+        if (handled) {
+            screen.setLastKeySelection(Util.getMillis());
+            list.resetMappingAndUpdateButtons();
+        }
+        return handled;
+    }
+
+    /**
+     * Accumulate a key press into the binding. If the pressed key is a modifier
+     * being added to a non-modifier primary key, add it to the modifier set.
+     * Otherwise, promote the pressed key to primary and demote the previous primary
+     * to a modifier.
+     *
+     * @param id         The binding ID.
+     * @param currentKey The current primary bound key.
+     * @param pressedKey The newly pressed key.
+     * @param setKey     Callback to set the primary bound key.
+     */
+    private static void applyKeyPress(String id, InputConstants.Key currentKey, InputConstants.Key pressedKey,
+            Consumer<InputConstants.Key> setKey) {
+        if (ModifierManager.isModifierKey(pressedKey) && !currentKey.equals(InputConstants.UNKNOWN)
+                && !ModifierManager.isModifierKey(currentKey)) {
+            ModifierManager.addModifier(id, pressedKey);
+            ModifierManager.removeModifier(id, currentKey);
+        } else {
+            ModifierManager.addModifier(id, currentKey);
+            setKey.accept(pressedKey);
+        }
+    }
 }

@@ -11,6 +11,7 @@ import org.lwjgl.glfw.GLFW;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.Options;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import us.kenny.core.MultiKeyBinding;
@@ -166,6 +167,63 @@ public class ModifierManager {
         if (a.size() != b.size())
             return false;
         return a.containsAll(b);
+    }
+
+    /**
+     * Compare the complete gestures represented by two vanilla key bindings.
+     */
+    public static boolean bindingsConflict(KeyMapping first, KeyMapping second) {
+        return getBindingChord(first).conflictsWith(getBindingChord(second));
+    }
+
+    /**
+     * Compare the complete gestures represented by a vanilla and an additional
+     * key binding.
+     */
+    public static boolean bindingsConflict(KeyMapping first, MultiKeyBinding second) {
+        return getBindingChord(first).conflictsWith(getBindingChord(second));
+    }
+
+    /**
+     * Compare the complete gestures represented by two additional key bindings.
+     */
+    public static boolean bindingsConflict(MultiKeyBinding first, MultiKeyBinding second) {
+        return getBindingChord(first).conflictsWith(getBindingChord(second));
+    }
+
+    private static BindingChord getBindingChord(KeyMapping binding) {
+        return getBindingChord(
+                ((KeyMappingAccessor) binding).getBoundKey(),
+                binding.getName(),
+                binding.getName());
+    }
+
+    private static BindingChord getBindingChord(MultiKeyBinding binding) {
+        return getBindingChord(
+                binding.getKey(),
+                ToggleManager.stripMultiPrefix(binding.getAction()),
+                binding.getId().toString());
+    }
+
+    private static BindingChord getBindingChord(InputConstants.Key primaryKey, String action, String modifierId) {
+        Options options = MultiKeyBindingManager.getGameOptions();
+        boolean debugChord = isDebugChord(options, action);
+        InputConstants.Key debugModifier = options == null
+                ? InputConstants.UNKNOWN
+                : ((KeyMappingAccessor) options.keyDebugModifier).getBoundKey();
+        return BindingChord.of(primaryKey, getModifiers(modifierId), debugChord, debugModifier);
+    }
+
+    private static boolean isDebugChord(Options options, String action) {
+        if (options == null) {
+            return false;
+        }
+        for (KeyMapping debugKey : options.debugKeys) {
+            if (debugKey.getName().equals(action)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

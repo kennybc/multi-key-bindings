@@ -29,7 +29,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import us.kenny.EditVisibilityMode;
-import us.kenny.HiddenBindingManager;
 import us.kenny.ProfileManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingScreen;

@@ -19,13 +19,7 @@ import us.kenny.core.profile.ProfileNameValidator;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Chat formatting palette used by all /mkb feedback for a consistent look.
- * kept as constants near the top so tweaks are one-stop.
- */
-
-/**
- * Client-side /mkb subcommands for profile CRUD and switching. All
- * feedback goes to the local chat via sendFeedback / sendError.
+ * Client-side /mkb subcommands for profile CRUD and switching.
  */
 public final class MkbCommand {
     private static final ChatFormatting HEADER = ChatFormatting.WHITE;
@@ -178,8 +172,7 @@ public final class MkbCommand {
             src.sendError(Component.translatable("multi.profile.command.error.exists", nameArg(name)));
             return 0;
         }
-        src.sendFeedback(Component.translatable("multi.profile.command.created", nameArg(name))
-                );
+        src.sendFeedback(Component.translatable("multi.profile.command.created", nameArg(name)));
         return 1;
     }
 
@@ -188,8 +181,7 @@ public final class MkbCommand {
             src.sendError(Component.translatable("multi.profile.command.error.not_found", nameArg(name)));
             return 0;
         }
-        src.sendFeedback(Component.translatable("multi.profile.command.loaded", nameArg(name))
-                );
+        src.sendFeedback(Component.translatable("multi.profile.command.loaded", nameArg(name)));
         return 1;
     }
 
@@ -227,8 +219,7 @@ public final class MkbCommand {
             src.sendError(Component.translatable("multi.profile.command.error.not_found", nameArg(name)));
             return 0;
         }
-        src.sendFeedback(Component.translatable("multi.profile.command.deleted", nameArg(name))
-                );
+        src.sendFeedback(Component.translatable("multi.profile.command.deleted", nameArg(name)));
         return 1;
     }
 }

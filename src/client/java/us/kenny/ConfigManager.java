@@ -1,28 +1,16 @@
 package us.kenny;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.InputConstants;
-import net.fabricmc.loader.api.FabricLoader;
 import us.kenny.core.MultiKeyBinding;
-import us.kenny.core.profile.Profile;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 public class ConfigManager {
     public static final int CONFIG_VERSION = 3;
-    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir()
-            .resolve("multi-key-bindings.json");
-    private static final Gson GSON = new Gson();
 
     public static boolean isLoading = false;
 
@@ -48,29 +36,6 @@ public class ConfigManager {
         } finally {
             ToggleManager.ensurePrimaries();
             isLoading = false;
-        }
-    }
-
-    /**
-     * Populate the modifier and binding managers from a profile. Callers
-     * must clear the managers first.
-     */
-    static void applyStateFromProfile(Profile profile) {
-        for (var entry : profile.getModifiers().entrySet()) {
-            List<InputConstants.Key> modifiers = parseModifiers(entry.getValue().getAsJsonArray());
-            if (!modifiers.isEmpty()) {
-                ModifierManager.setModifiers(entry.getKey(), modifiers);
-            }
-        }
-        for (JsonElement element : profile.getBindings()) {
-            JsonObject keyBindingJson = element.getAsJsonObject();
-            UUID id = UUID.fromString(keyBindingJson.get("id").getAsString());
-            String action = keyBindingJson.get("action").getAsString();
-            String translationKey = keyBindingJson.get("key").getAsString();
-            MultiKeyBindingManager.addKeyBinding(action, null, translationKey, id);
-            if (keyBindingJson.has("primary") && keyBindingJson.get("primary").getAsBoolean()) {
-                ToggleManager.setPrimary(action, id);
-            }
         }
     }
 
@@ -158,7 +123,7 @@ public class ConfigManager {
      *
      * @param array The JSON array of key name strings.
      */
-    private static List<InputConstants.Key> parseModifiers(JsonArray array) {
+    static List<InputConstants.Key> parseModifiers(JsonArray array) {
         List<InputConstants.Key> modifiers = new ArrayList<>();
         for (JsonElement el : array) {
             modifiers.add(InputConstants.getKey(el.getAsString()));

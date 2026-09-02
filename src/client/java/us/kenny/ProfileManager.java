@@ -3,7 +3,9 @@ package us.kenny;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import net.fabricmc.loader.api.FabricLoader;
 import us.kenny.core.profile.Profile;
@@ -19,6 +21,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
@@ -366,12 +369,11 @@ public final class ProfileManager {
 
         isLoading = true;
         try {
-            applyVanillaFromProfile(profile);
+            applyProfile(profile);
 
             MultiKeyBindingManager.clearAll();
             ModifierManager.clearAll();
             ToggleManager.clearAll();
-            ConfigManager.applyStateFromProfile(profile);
             ToggleManager.ensurePrimaries();
 
             net.minecraft.client.KeyMapping.resetMapping();
@@ -401,33 +403,49 @@ public final class ProfileManager {
     }
 
     /**
-     * Apply the profile's vanilla snapshot to every registered KeyMapping.
-     * Missing entries (mod uninstalled since save) are logged and skipped;
-     * the profile's record is left intact so a reinstall restores the
-     * assignment.
+     * Populate the key bindings from a profile. Callers must clear the managers
+     * first.
      */
-    private static void applyVanillaFromProfile(Profile profile) {
+    private static void applyProfile(Profile profile) {
+        // Populate vanilla key bindings
         net.minecraft.client.Options options = MultiKeyBindingManager.getGameOptions();
-        if (options == null) {
-            return;
-        }
-        JsonObject vanilla = profile.getVanilla();
-        java.util.Set<String> seen = new java.util.HashSet<>();
-        for (net.minecraft.client.KeyMapping mapping : options.keyMappings) {
-            String translationKey = mapping.getName();
-            if (!vanilla.has(translationKey)) {
-                continue;
+        if (options != null) {
+            JsonObject vanilla = profile.getVanilla();
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            for (net.minecraft.client.KeyMapping mapping : options.keyMappings) {
+                String translationKey = mapping.getName();
+                if (!vanilla.has(translationKey)) {
+                    continue;
+                }
+                String keyName = vanilla.get(translationKey).getAsString();
+                com.mojang.blaze3d.platform.InputConstants.Key key = com.mojang.blaze3d.platform.InputConstants
+                        .getKey(keyName);
+                mapping.setKey(key);
+                seen.add(translationKey);
             }
-            String keyName = vanilla.get(translationKey).getAsString();
-            com.mojang.blaze3d.platform.InputConstants.Key key = com.mojang.blaze3d.platform.InputConstants
-                    .getKey(keyName);
-            mapping.setKey(key);
-            seen.add(translationKey);
+            for (String recorded : vanilla.keySet()) {
+                if (!seen.contains(recorded)) {
+                    MultiKeyBindingClient.LOGGER.info(
+                            "Skipping stale profile entry for unregistered key mapping: {}", recorded);
+                }
+            }
         }
-        for (String recorded : vanilla.keySet()) {
-            if (!seen.contains(recorded)) {
-                MultiKeyBindingClient.LOGGER.info(
-                        "Skipping stale profile entry for unregistered key mapping: {}", recorded);
+
+        // Populate modifiers
+        for (var entry : profile.getModifiers().entrySet()) {
+            List<InputConstants.Key> modifiers = ConfigManager.parseModifiers(entry.getValue().getAsJsonArray());
+            if (!modifiers.isEmpty()) {
+                ModifierManager.setModifiers(entry.getKey(), modifiers);
+            }
+        }
+        for (JsonElement element : profile.getBindings()) {
+            JsonObject keyBindingJson = element.getAsJsonObject();
+            UUID id = UUID.fromString(keyBindingJson.get("id").getAsString());
+            String action = keyBindingJson.get("action").getAsString();
+            String translationKey = keyBindingJson.get("key").getAsString();
+            MultiKeyBindingManager.addKeyBinding(action, null, translationKey, id);
+            if (keyBindingJson.has("primary") && keyBindingJson.get("primary").getAsBoolean()) {
+                ToggleManager.setPrimary(action, id);
             }
         }
     }

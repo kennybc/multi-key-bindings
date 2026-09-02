@@ -59,8 +59,7 @@ public abstract class NewKeyBindsListMixin {
                     (KeyBindsList.Entry) null, primary, true);
             ((CustomListAccessor) self).invokeAddEntry(primaryEntry);
 
-            // Sub-bindings never render in edit mode — visibility is per
-            // action, and the primary owns the eye toggle.
+            // Sub-bindings never render in edit mode
             if (editMode) {
                 continue;
             }

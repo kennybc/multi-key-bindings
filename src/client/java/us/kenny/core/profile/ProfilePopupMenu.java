@@ -13,11 +13,7 @@ import java.util.function.Consumer;
 
 /**
  * Upward-opening menu anchored above the dropdown button. Lists profiles
- * with the active one marked, then "New profile..." and "Manage
- * profiles..." action rows.
- *
- * Not a Widget — rendered and click-tested directly from the parent
- * screen's mixin.
+ * with the active one marked and additional options.
  */
 public final class ProfilePopupMenu {
     private static final int ROW_HEIGHT = 12;
@@ -58,7 +54,7 @@ public final class ProfilePopupMenu {
      */
     public void render(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
         gfx.fill(x, y, x + width, y + height, 0xF01A1A1A);
-        int border = 0xFFFFC857;
+        int border = 0xFFFFFFFF;
         gfx.fill(x, y, x + width, y + 1, border);
         gfx.fill(x, y + height - 1, x + width, y + height, border);
         gfx.fill(x, y, x + 1, y + height, border);
@@ -66,8 +62,10 @@ public final class ProfilePopupMenu {
 
         int rowY = y + PADDING;
         for (String name : profiles) {
-            String label = name.equals(activeProfile) ? name + "  ✓" : name;
-            renderRow(gfx, mouseX, mouseY, rowY, label, 0xFFFFFFFF);
+            boolean isActive = name.equals(activeProfile);
+            String label = (isActive ? "* " : "  ") + name;
+            int color = isActive ? 0xFF55FFFF : 0xFFAAAAAA;
+            renderRow(gfx, mouseX, mouseY, rowY, label, color);
             rowY += ROW_HEIGHT;
         }
 
@@ -75,10 +73,10 @@ public final class ProfilePopupMenu {
         rowY += SEPARATOR_HEIGHT;
 
         renderRow(gfx, mouseX, mouseY, rowY,
-                Component.translatable("multi.profile.menu.new").getString(), 0xFF9CCCCC);
+                Component.translatable("multi.profile.menu.new").getString(), 0xFFFFFFFF);
         rowY += ROW_HEIGHT;
         renderRow(gfx, mouseX, mouseY, rowY,
-                Component.translatable("multi.profile.menu.manage").getString(), 0xFF9CCCCC);
+                Component.translatable("multi.profile.menu.manage").getString(), 0xFFFFFFFF);
     }
 
     private void renderRow(GuiGraphicsExtractor gfx, int mouseX, int mouseY, int rowY, String label, int color) {

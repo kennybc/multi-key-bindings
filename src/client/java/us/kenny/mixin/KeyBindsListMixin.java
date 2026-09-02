@@ -103,8 +103,7 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
             }
             this.addEntry(new MultiKeyBindingEntry(self, primary, true));
 
-            // Sub-bindings never render in edit mode — visibility is
-            // per-action, and the primary owns the eye toggle.
+            // Sub-bindings never render in edit mode
             if (editMode) {
                 continue;
             }

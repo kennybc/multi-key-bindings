@@ -3,7 +3,6 @@ package us.kenny.core;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Unique;
-import us.kenny.EditVisibilityMode;
 import us.kenny.HiddenBindingManager;
 import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
@@ -140,7 +139,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
     @Override
     public void extractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered,
             float deltaTicks) {
-        boolean editMode = EditVisibilityMode.isActive();
+        boolean editMode = HiddenBindingManager.isEditMode();
 
         int scrollbarX = this.parentList.getRowRight() + 6 + 2;
         int contentX = this.getContentX();
@@ -291,7 +290,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
     }
 
     private Button rowActionButton() {
-        if (EditVisibilityMode.isActive() && this.primary) {
+        if (HiddenBindingManager.isEditMode() && this.primary) {
             return this.eyeButton;
         }
         return this.primary ? this.addKeyBindingButton : this.removeKeyBindingButton;

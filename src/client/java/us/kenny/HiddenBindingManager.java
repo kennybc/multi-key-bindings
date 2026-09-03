@@ -4,36 +4,38 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-/**
- * In-memory reflection of the active profile's hidden set. Mutations
- * fire a callback (set by ProfileManager on load) so changes persist
- * back to the active profile file.
- */
 public final class HiddenBindingManager {
     private static Set<String> hidden = new LinkedHashSet<>();
-    private static Runnable onMutated = () -> {
-    };
+    private static boolean editMode = false;
 
     private HiddenBindingManager() {
     }
 
     /**
+     * Check whether a key binding is hidden.
+     *
      * @param translationKey The KeyMapping translation key to check.
      */
     public static boolean isHidden(String translationKey) {
         return hidden.contains(translationKey);
     }
 
+    /**
+     * Get the current hidden set as an unmodifiable view.
+     */
     public static Set<String> getAll() {
         return Collections.unmodifiableSet(hidden);
     }
 
+    /**
+     * Get the number of hidden key bindings.
+     */
     public static int size() {
         return hidden.size();
     }
 
     /**
-     * Replace the current hidden set. Does not fire the mutation callback.
+     * Replace the current hidden set. Does not trigger a persist.
      *
      * @param next The full set to install.
      */
@@ -42,33 +44,60 @@ public final class HiddenBindingManager {
     }
 
     /**
-     * Register a callback that fires on each hide/unhide mutation. Null
-     * clears the callback.
+     * Hide a key binding and persist the change.
      *
-     * @param callback The callback to install.
+     * @param translationKey The KeyMapping translation key to hide.
      */
-    public static void setOnMutated(Runnable callback) {
-        onMutated = callback == null ? () -> {
-        } : callback;
-    }
-
     public static void hide(String translationKey) {
         if (hidden.add(translationKey)) {
-            onMutated.run();
+            ProfileManager.persistHiddenSetToIndex();
         }
     }
 
+    /**
+     * Unhide a key binding and persist the change.
+     *
+     * @param translationKey The KeyMapping translation key to unhide.
+     */
     public static void unhide(String translationKey) {
         if (hidden.remove(translationKey)) {
-            onMutated.run();
+            ProfileManager.persistHiddenSetToIndex();
         }
     }
 
+    /**
+     * Toggle whether a key binding is hidden.
+     *
+     * @param translationKey The KeyMapping translation key to toggle.
+     */
     public static void toggle(String translationKey) {
         if (isHidden(translationKey)) {
             unhide(translationKey);
         } else {
             hide(translationKey);
         }
+    }
+
+    /**
+     * Check whether the Key Binds screen is in edit-visibility mode.
+     */
+    public static boolean isEditMode() {
+        return editMode;
+    }
+
+    /**
+     * Set the edit-visibility mode. Transient; not persisted.
+     *
+     * @param value The new edit-mode state.
+     */
+    public static void setEditMode(boolean value) {
+        editMode = value;
+    }
+
+    /**
+     * Flip the edit-visibility mode.
+     */
+    public static void toggleEditMode() {
+        editMode = !editMode;
     }
 }

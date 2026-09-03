@@ -15,7 +15,6 @@ import java.util.function.Consumer;
  */
 public final class ProfileNameDialog extends Screen {
     private final Screen parent;
-    private final Component titleText;
     private final Component confirmText;
     private final String initialValue;
     private final Consumer<String> onSubmit;
@@ -27,7 +26,6 @@ public final class ProfileNameDialog extends Screen {
             String initialValue, Consumer<String> onSubmit) {
         super(title);
         this.parent = parent;
-        this.titleText = title;
         this.confirmText = confirm;
         this.initialValue = initialValue;
         this.onSubmit = onSubmit;
@@ -77,7 +75,7 @@ public final class ProfileNameDialog extends Screen {
 
         int cx = this.width / 2;
         int cy = this.height / 2;
-        gfx.text(this.font, titleText, cx - this.font.width(titleText) / 2, cy - 50, 0xFFFFFFFF);
+        gfx.text(this.font, this.title, cx - this.font.width(this.title) / 2, cy - 50, 0xFFFFFFFF);
 
         Component hint = Component.translatable("multi.profile.dialog.hint");
         gfx.text(this.font, hint, cx - this.font.width(hint) / 2, cy + 5, 0xFF999999);

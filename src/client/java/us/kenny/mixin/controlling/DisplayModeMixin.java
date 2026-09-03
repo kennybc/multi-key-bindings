@@ -14,7 +14,6 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
-import us.kenny.EditVisibilityMode;
 import us.kenny.HiddenBindingManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
@@ -113,7 +112,7 @@ public abstract class DisplayModeMixin {
 
         // Wrap original predicate
         return entry -> {
-            boolean editMode = EditVisibilityMode.isActive();
+            boolean editMode = HiddenBindingManager.isEditMode();
 
             // Apply filter to custom MultiKeyBinding
             if (entry instanceof MultiKeyBindingEntry multiKeyBindingEntry) {

@@ -10,11 +10,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import us.kenny.EditVisibilityMode;
 import us.kenny.HiddenBindingManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.ToggleManager;
 import us.kenny.core.MultiKeyBinding;
+import us.kenny.core.MultiKeyBindingScreenHelper;
 import us.kenny.core.controlling.ControllingMultiKeyBindingEntry;
 
 import java.util.ArrayList;
@@ -34,7 +34,7 @@ public abstract class NewKeyBindsListMixin {
     @Inject(method = "<init>", at = @At("RETURN"))
     private void addToggleEntries(CallbackInfo ci) {
         CustomList self = (CustomList) (Object) this;
-        boolean editMode = EditVisibilityMode.isActive();
+        boolean editMode = HiddenBindingManager.isEditMode();
         boolean headerAdded = false;
         for (String action : ToggleManager.TOGGLE_ACTIONS) {
             String fullAction = "multi." + action;
@@ -85,19 +85,8 @@ public abstract class NewKeyBindsListMixin {
     private void pruneEmptyCategories(CallbackInfo ci) {
         CustomList self = (CustomList) (Object) this;
         List<KeyBindsList.Entry> children = new ArrayList<>(self.children());
-        List<KeyBindsList.Entry> kept = new ArrayList<>();
-        for (int i = 0; i < children.size(); i++) {
-            KeyBindsList.Entry entry = children.get(i);
-            if (entry instanceof NewKeyBindsList.CategoryEntry || entry instanceof KeyBindsList.CategoryEntry) {
-                boolean isEmptyCategory = i + 1 < children.size()
-                        && !(children.get(i + 1) instanceof NewKeyBindsList.CategoryEntry
-                                || children.get(i + 1) instanceof KeyBindsList.CategoryEntry);
-                if (!isEmptyCategory) {
-                    continue;
-                }
-            }
-            kept.add(entry);
-        }
+        List<KeyBindsList.Entry> kept = MultiKeyBindingScreenHelper.filterEmptyCategories(children,
+                e -> e instanceof NewKeyBindsList.CategoryEntry || e instanceof KeyBindsList.CategoryEntry);
 
         if (kept.size() != children.size()) {
             self.clearEntries();

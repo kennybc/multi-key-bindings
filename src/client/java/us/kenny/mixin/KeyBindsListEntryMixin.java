@@ -15,12 +15,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import us.kenny.EditVisibilityMode;
 import us.kenny.HiddenBindingManager;
 import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
+import us.kenny.core.profile.KeyEntryVisibilityController;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,9 +50,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
     private boolean hasCollision;
 
     @Unique
-    private Button addKeyBindingButton;
-    @Unique
-    private Button toggleVisibilityButton;
+    private KeyEntryVisibilityController visibilityController;
     @Unique
     private KeyBindsList keyBindsList;
     @Unique
@@ -83,31 +81,11 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
             CallbackInfo ci) {
         this.self = (KeyEntry) (Object) this;
         this.keyBindsList = keyBindsList;
-
-        this.addKeyBindingButton = Button.builder(Component.nullToEmpty("+"), (button) -> {
-            this.self.setFocused(false);
-            createCustomKeyBinding();
-        })
-                .size(20, 20)
-                .build();
-
-        this.toggleVisibilityButton = Button.builder(Component.literal(visibilityLabel()), (button) -> {
-            this.self.setFocused(false);
-            HiddenBindingManager.toggle(this.key.getName());
-            this.keyBindsList.resetMappingAndUpdateButtons();
-        })
-                .size(60, 20)
-                .build();
-    }
-
-    @Unique
-    private String visibilityLabel() {
-        return HiddenBindingManager.isHidden(this.key.getName()) ? "Hidden" : "Visible";
-    }
-
-    @Unique
-    private Button rowActionButton() {
-        return EditVisibilityMode.isActive() ? this.toggleVisibilityButton : this.addKeyBindingButton;
+        this.visibilityController = new KeyEntryVisibilityController(
+                keyBinding,
+                this::createCustomKeyBinding,
+                keyBindsList::resetMappingAndUpdateButtons,
+                () -> this.self.setFocused(false));
     }
 
     /**
@@ -119,8 +97,8 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
     private void onExtractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered,
             float deltaTicks,
             CallbackInfo ci) {
-        boolean editMode = EditVisibilityMode.isActive();
-        Button button = rowActionButton();
+        boolean editMode = HiddenBindingManager.isEditMode();
+        Button button = this.visibilityController.rowActionButton();
 
         // In edit mode the change/reset buttons don't render — place the
         // visibility toggle where the vanilla resetButton lives, so it
@@ -131,17 +109,11 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
         int buttonY = this.getContentY() - 2;
 
         if (editMode) {
-            this.toggleVisibilityButton.setMessage(Component.literal(visibilityLabel()));
+            this.visibilityController.refreshVisibilityLabel();
         }
 
         button.setPosition(buttonX, buttonY);
         button.extractRenderState(graphics, mouseX, mouseY, deltaTicks);
-
-        // Shift the row-action button to the left if the "Ok Zoomer" settings
-        // button is also rendered.
-        if (key.getName().equals("key.ok_zoomer.zoom") && this.children().size() > 3) {
-            buttonX -= 22;
-        }
     }
 
     /**
@@ -150,7 +122,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
     @WrapOperation(method = "extractContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/Button;extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V", ordinal = 0))
     private void gateResetButton(Button button, GuiGraphicsExtractor graphics, int mouseX, int mouseY,
             float delta, Operation<Void> original) {
-        if (EditVisibilityMode.isActive()) {
+        if (HiddenBindingManager.isEditMode()) {
             return;
         }
         original.call(button, graphics, mouseX, mouseY, delta);
@@ -162,7 +134,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
     @WrapOperation(method = "extractContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/Button;extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V", ordinal = 1))
     private void gateChangeButton(Button button, GuiGraphicsExtractor graphics, int mouseX, int mouseY,
             float delta, Operation<Void> original) {
-        if (EditVisibilityMode.isActive()) {
+        if (HiddenBindingManager.isEditMode()) {
             return;
         }
         original.call(button, graphics, mouseX, mouseY, delta);
@@ -172,10 +144,10 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
      * Gray out the binding name when this row is hidden and we're in
      * edit-visibility mode.
      */
-    @WrapOperation(method = "extractContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;text(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V"))
+    @WrapOperation(method = "extractContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;text(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V", ordinal = 0))
     private void grayHiddenName(GuiGraphicsExtractor graphics, Font font, Component text, int x, int y, int color,
             Operation<Void> original) {
-        int actualColor = (EditVisibilityMode.isActive()
+        int actualColor = (HiddenBindingManager.isEditMode()
                 && HiddenBindingManager.isHidden(this.key.getName()))
                         ? 0xFF888888
                         : color;
@@ -188,7 +160,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
     @WrapOperation(method = "extractContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;fill(IIIII)V"))
     private void gateCollisionStripe(GuiGraphicsExtractor graphics, int x1, int y1, int x2, int y2, int color,
             Operation<Void> original) {
-        if (EditVisibilityMode.isActive()) {
+        if (HiddenBindingManager.isEditMode()) {
             return;
         }
         original.call(graphics, x1, y1, x2, y2, color);
@@ -248,17 +220,19 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
      */
     @Override
     public List<? extends GuiEventListener> children() {
-        if (EditVisibilityMode.isActive()) {
-            return ImmutableList.of(rowActionButton());
+        Button action = this.visibilityController.rowActionButton();
+        if (HiddenBindingManager.isEditMode()) {
+            return ImmutableList.of(action);
         }
-        return ImmutableList.of(this.changeButton, this.resetButton, rowActionButton());
+        return ImmutableList.of(this.changeButton, this.resetButton, action);
     }
 
     @Override
     public List<? extends NarratableEntry> narratables() {
-        if (EditVisibilityMode.isActive()) {
-            return ImmutableList.of(rowActionButton());
+        Button action = this.visibilityController.rowActionButton();
+        if (HiddenBindingManager.isEditMode()) {
+            return ImmutableList.of(action);
         }
-        return ImmutableList.of(this.changeButton, this.resetButton, rowActionButton());
+        return ImmutableList.of(this.changeButton, this.resetButton, action);
     }
 }

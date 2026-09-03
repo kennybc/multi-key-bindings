@@ -27,7 +27,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import us.kenny.EditVisibilityMode;
 import us.kenny.HiddenBindingManager;
 import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
@@ -35,6 +34,7 @@ import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
 import us.kenny.core.controlling.ControllingHideableKeyEntry;
 import us.kenny.core.controlling.ControllingMultiKeyBindingEntry;
+import us.kenny.core.profile.KeyEntryVisibilityController;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,9 +56,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     @Unique
     private boolean hidden;
     @Unique
-    private Button addKeyBindingButton;
-    @Unique
-    private Button eyeButton;
+    private KeyEntryVisibilityController visibilityController;
     @Unique
     private NewKeyBindsList newKeyBindsList;
 
@@ -98,31 +96,11 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
             CallbackInfo ci) {
         this.hidden = false;
         this.newKeyBindsList = newKeyBindsList;
-
-        this.addKeyBindingButton = Button.builder(Component.nullToEmpty("+"), (button) -> {
-            this.setFocused(false);
-            createCustomKeyBinding();
-        })
-                .size(20, 20)
-                .build();
-
-        this.eyeButton = Button.builder(Component.literal(visibilityLabel()), (button) -> {
-            this.setFocused(false);
-            HiddenBindingManager.toggle(this.key.getName());
-            this.newKeyBindsList.resetMappingAndUpdateButtons();
-        })
-                .size(60, 20)
-                .build();
-    }
-
-    @Unique
-    private String visibilityLabel() {
-        return HiddenBindingManager.isHidden(this.key.getName()) ? "Hidden" : "Visible";
-    }
-
-    @Unique
-    private Button rowActionButton() {
-        return EditVisibilityMode.isActive() ? this.eyeButton : this.addKeyBindingButton;
+        this.visibilityController = new KeyEntryVisibilityController(
+                keyBinding,
+                this::createCustomKeyBinding,
+                newKeyBindsList::resetMappingAndUpdateButtons,
+                () -> this.setFocused(false));
     }
 
     /**
@@ -131,13 +109,13 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     @Inject(method = "extractContent", at = @At("HEAD"))
     private void onExtractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered,
             float deltaTicks, CallbackInfo ci) {
-        boolean editMode = EditVisibilityMode.isActive();
-        Button button = rowActionButton();
+        boolean editMode = HiddenBindingManager.isEditMode();
+        Button button = this.visibilityController.rowActionButton();
 
         int scrollbarX = newKeyBindsList.getRowRight() + 6 + 2;
         int buttonX;
         if (editMode) {
-            this.eyeButton.setMessage(Component.literal(visibilityLabel()));
+            this.visibilityController.refreshVisibilityLabel();
             // Slot where the vanilla reset button would sit (rightmost),
             // since we skip rendering reset in edit mode.
             buttonX = scrollbarX - button.getWidth() - 10;
@@ -159,7 +137,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     private void onResetButtonExtractContent(Button button, GuiGraphicsExtractor graphics, int mouseX, int mouseY,
             float delta,
             Operation<Void> original) {
-        if (EditVisibilityMode.isActive()) {
+        if (HiddenBindingManager.isEditMode()) {
             return;
         }
         button.active = !this.hidden && !this.key.isDefault();
@@ -173,7 +151,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     private void onChangeKeyButtonExtractContent(Button button, GuiGraphicsExtractor graphics, int mouseX, int mouseY,
             float delta,
             Operation<Void> original) {
-        if (EditVisibilityMode.isActive()) {
+        if (HiddenBindingManager.isEditMode()) {
             return;
         }
         button.active = !this.hidden;
@@ -184,10 +162,10 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
      * Gray out the binding name when this row is hidden and edit mode
      * is active.
      */
-    @WrapOperation(method = "extractContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;text(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V"))
+    @WrapOperation(method = "extractContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;text(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V", ordinal = 0))
     private void grayHiddenName(GuiGraphicsExtractor graphics, Font font, Component text, int x, int y, int color,
             Operation<Void> original) {
-        int actualColor = (EditVisibilityMode.isActive()
+        int actualColor = (HiddenBindingManager.isEditMode()
                 && HiddenBindingManager.isHidden(this.key.getName()))
                         ? 0xFF888888
                         : color;
@@ -200,7 +178,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
     @WrapOperation(method = "extractContent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;fill(IIIII)V"))
     private void gateCollisionStripe(GuiGraphicsExtractor graphics, int x1, int y1, int x2, int y2, int color,
             Operation<Void> original) {
-        if (EditVisibilityMode.isActive()) {
+        if (HiddenBindingManager.isEditMode()) {
             return;
         }
         original.call(graphics, x1, y1, x2, y2, color);
@@ -257,11 +235,11 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
      */
     @Override
     public List<GuiEventListener> children() {
-        if (EditVisibilityMode.isActive()) {
-            return ImmutableList.of(rowActionButton());
+        Button action = this.visibilityController.rowActionButton();
+        if (HiddenBindingManager.isEditMode()) {
+            return ImmutableList.of(action);
         }
-
-        return ImmutableList.of(this.btnChangeKeyBinding, this.btnResetKeyBinding, rowActionButton());
+        return ImmutableList.of(this.btnChangeKeyBinding, this.btnResetKeyBinding, action);
     }
 
     /**
@@ -269,9 +247,10 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
      */
     @Override
     public List<? extends NarratableEntry> narratables() {
-        if (EditVisibilityMode.isActive()) {
-            return ImmutableList.of(rowActionButton());
+        Button action = this.visibilityController.rowActionButton();
+        if (HiddenBindingManager.isEditMode()) {
+            return ImmutableList.of(action);
         }
-        return ImmutableList.of(this.btnChangeKeyBinding, this.btnResetKeyBinding, rowActionButton());
+        return ImmutableList.of(this.btnChangeKeyBinding, this.btnResetKeyBinding, action);
     }
 }

@@ -111,43 +111,9 @@ public final class MkbCommand {
     }
 
     private static void helpEntry(FabricClientCommandSource src, String syntax, String descKey) {
-        src.sendFeedback(styleSyntax(syntax));
+        src.sendFeedback(Component.literal(syntax).withStyle(HEADER));
         src.sendFeedback(Component.literal("  ")
                 .append(Component.translatable(descKey).withStyle(HINT, ChatFormatting.ITALIC)));
-    }
-
-    /**
-     * Split a syntax string into a styled Component: literal parts white,
-     * argument tokens (bounded by <> or []) in gold.
-     */
-    private static Component styleSyntax(String syntax) {
-        var line = Component.literal("").withStyle(ChatFormatting.WHITE);
-        StringBuilder buf = new StringBuilder();
-        int i = 0;
-        while (i < syntax.length()) {
-            char c = syntax.charAt(i);
-            if (c == '<' || c == '[') {
-                if (buf.length() > 0) {
-                    line.append(Component.literal(buf.toString()));
-                    buf.setLength(0);
-                }
-                char close = c == '<' ? '>' : ']';
-                int end = syntax.indexOf(close, i);
-                if (end < 0) {
-                    end = syntax.length() - 1;
-                }
-                line.append(Component.literal(syntax.substring(i, end + 1))
-                        .withStyle(ChatFormatting.GOLD));
-                i = end + 1;
-            } else {
-                buf.append(c);
-                i++;
-            }
-        }
-        if (buf.length() > 0) {
-            line.append(Component.literal(buf.toString()));
-        }
-        return line;
     }
 
     private static int listProfiles(FabricClientCommandSource src) {
@@ -200,11 +166,19 @@ public final class MkbCommand {
     }
 
     private static int duplicate(FabricClientCommandSource src, String name, String newName) {
-        if (!ProfileManager.duplicate(name, newName)) {
+        if (newName != null && !ProfileNameValidator.isValid(newName)) {
+            src.sendError(Component.translatable("multi.profile.command.error.invalid_name"));
+            return 0;
+        }
+        if (newName != null && ProfileNameValidator.isTaken(newName, ProfileManager.listProfileNames())) {
+            src.sendError(Component.translatable("multi.profile.command.error.exists", nameArg(newName)));
+            return 0;
+        }
+        String resolved = ProfileManager.duplicate(name, newName);
+        if (resolved == null) {
             src.sendError(Component.translatable("multi.profile.command.error.not_found", nameArg(name)));
             return 0;
         }
-        String resolved = newName == null ? name + "_copy" : newName;
         src.sendFeedback(Component.translatable("multi.profile.command.duplicated",
                 nameArg(name), nameArg(resolved)));
         return 1;

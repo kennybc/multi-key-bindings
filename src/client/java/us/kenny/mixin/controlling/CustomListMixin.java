@@ -9,7 +9,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import us.kenny.EditVisibilityMode;
 import us.kenny.HiddenBindingManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
@@ -43,7 +42,7 @@ public abstract class CustomListMixin {
      */
     @Inject(method = "addEntry(Lnet/minecraft/client/gui/screens/options/controls/KeyBindsList$Entry;)I", at = @At("HEAD"), cancellable = true)
     private void gateHiddenAddEntry(KeyBindsList.Entry entry, CallbackInfoReturnable<Integer> cir) {
-        if (EditVisibilityMode.isActive()) {
+        if (HiddenBindingManager.isEditMode()) {
             return;
         }
 
@@ -67,7 +66,7 @@ public abstract class CustomListMixin {
     @Inject(method = "addEntry(Lnet/minecraft/client/gui/screens/options/controls/KeyBindsList$Entry;)I", at = @At("TAIL"))
     private void onAddEntry(KeyBindsList.Entry entry, CallbackInfoReturnable<Integer> cir) {
         // Only show top level bindings in visibility edit mode
-        if (EditVisibilityMode.isActive()) {
+        if (HiddenBindingManager.isEditMode()) {
             return;
         }
 

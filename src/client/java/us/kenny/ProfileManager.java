@@ -248,10 +248,7 @@ public final class ProfileManager {
             return vanilla;
         }
         for (net.minecraft.client.KeyMapping mapping : options.keyMappings) {
-            String translationKey = mapping.getName();
-            com.mojang.blaze3d.platform.InputConstants.Key key = ((us.kenny.mixin.KeyMappingAccessor) mapping)
-                    .getBoundKey();
-            vanilla.addProperty(translationKey, key.getName());
+            vanilla.addProperty(mapping.getName(), mapping.saveString());
         }
         return vanilla;
     }
@@ -286,7 +283,6 @@ public final class ProfileManager {
         // Hydrate global hidden set BEFORE loading a profile so the first
         // list build sees the filter applied.
         HiddenBindingManager.setAll(readHiddenFromIndex());
-        HiddenBindingManager.setOnMutated(ProfileManager::persistHiddenSetToIndex);
 
         if (listProfileNames().isEmpty()) {
             // Fresh install: seed a default from current state.
@@ -302,6 +298,7 @@ public final class ProfileManager {
                         .filter(p -> p.equalsIgnoreCase(DEFAULT_PROFILE))
                         .findFirst()
                         .orElse(profiles.isEmpty() ? DEFAULT_PROFILE : profiles.get(0)));
+        activeProfileName = active;
         load(active);
         if (!Files.exists(INDEX)) {
             writeIndex(active);
@@ -369,11 +366,11 @@ public final class ProfileManager {
 
         isLoading = true;
         try {
-            applyProfile(profile);
-
             MultiKeyBindingManager.clearAll();
             ModifierManager.clearAll();
             ToggleManager.clearAll();
+
+            applyProfile(profile);
             ToggleManager.ensurePrimaries();
 
             net.minecraft.client.KeyMapping.resetMapping();
@@ -393,9 +390,9 @@ public final class ProfileManager {
 
     /**
      * Write the current in-memory hidden set into config.json. Called on
-     * every hide/unhide mutation via HiddenBindingManager's callback.
+     * every hide/unhide mutation from HiddenBindingManager.
      */
-    private static void persistHiddenSetToIndex() {
+    static void persistHiddenSetToIndex() {
         if (isLoading) {
             return;
         }
@@ -477,8 +474,7 @@ public final class ProfileManager {
         }
         ensureDirectories();
         writeProfile(snapshotDefaults(name));
-        load(name);
-        return true;
+        return load(name);
     }
 
     /**
@@ -531,14 +527,16 @@ public final class ProfileManager {
 
     /**
      * Duplicate a profile file. A null newName picks "<name>_copy" (numbered
-     * _copy2, _copy3, ... if taken).
+     * _copy2, _copy3, ... if taken). Returns the resolved target name on
+     * success, or null if the source doesn't exist, the target name is
+     * invalid or taken, or the copy fails.
      *
      * @param name    The profile to duplicate.
      * @param newName The name of the new copy, or null to auto-name.
      */
-    public static boolean duplicate(String name, String newName) {
+    public static String duplicate(String name, String newName) {
         if (!Files.exists(getProfilePath(name))) {
-            return false;
+            return null;
         }
         String target = newName;
         if (target == null || target.isEmpty()) {
@@ -550,17 +548,17 @@ public final class ProfileManager {
             }
         }
         if (!ProfileNameValidator.isValid(target)) {
-            return false;
+            return null;
         }
         if (ProfileNameValidator.isTaken(target, listProfileNames())) {
-            return false;
+            return null;
         }
         try {
             Files.copy(getProfilePath(name), getProfilePath(target));
         } catch (IOException e) {
             MultiKeyBindingClient.LOGGER.error("Failed to duplicate profile {} -> {}", name, target, e);
-            return false;
+            return null;
         }
-        return true;
+        return target;
     }
 }

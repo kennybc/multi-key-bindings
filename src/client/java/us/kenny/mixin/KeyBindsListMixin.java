@@ -8,12 +8,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
-import us.kenny.EditVisibilityMode;
 import us.kenny.HiddenBindingManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.ToggleManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
+import us.kenny.core.MultiKeyBindingScreenHelper;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,7 +42,7 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
             Operation<Integer> original) {
         KeyBindsList self = (KeyBindsList) (Object) this;
 
-        if (entry instanceof KeyBindsList.KeyEntry && !EditVisibilityMode.isActive()) {
+        if (entry instanceof KeyBindsList.KeyEntry && !HiddenBindingManager.isEditMode()) {
             KeyMapping keyBinding = ((KeyBindsListEntryAccessor) entry).getKeyMapping();
             if (HiddenBindingManager.isHidden(keyBinding.getName())) {
                 return -1;
@@ -52,7 +52,7 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
         int lastIndex = original.call(instance, entry);
         // Multi sub-bindings don't render in edit mode — visibility is a
         // top-level trait, and their parent KeyEntry owns the eye toggle.
-        if (entry instanceof KeyBindsList.KeyEntry && !EditVisibilityMode.isActive()) {
+        if (entry instanceof KeyBindsList.KeyEntry && !HiddenBindingManager.isEditMode()) {
             KeyMapping keyBinding = ((KeyBindsListEntryAccessor) entry).getKeyMapping();
 
             Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager
@@ -81,7 +81,7 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
         if (self.getClass() != KeyBindsList.class) {
             return;
         }
-        boolean editMode = EditVisibilityMode.isActive();
+        boolean editMode = HiddenBindingManager.isEditMode();
         boolean headerAdded = false;
         for (String action : ToggleManager.TOGGLE_ACTIONS) {
             String fullAction = "multi." + action;
@@ -131,18 +131,8 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
             return;
         }
         List<KeyBindsList.Entry> children = new ArrayList<>(self.children());
-        List<KeyBindsList.Entry> kept = new ArrayList<>();
-        for (int i = 0; i < children.size(); i++) {
-            KeyBindsList.Entry entry = children.get(i);
-            if (entry instanceof KeyBindsList.CategoryEntry) {
-                boolean hasContent = i + 1 < children.size()
-                        && !(children.get(i + 1) instanceof KeyBindsList.CategoryEntry);
-                if (!hasContent) {
-                    continue;
-                }
-            }
-            kept.add(entry);
-        }
+        List<KeyBindsList.Entry> kept = MultiKeyBindingScreenHelper.filterEmptyCategories(
+                children, e -> e instanceof KeyBindsList.CategoryEntry);
         if (kept.size() != children.size()) {
             self.replaceEntries(kept);
         }

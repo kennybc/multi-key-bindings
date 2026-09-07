@@ -193,13 +193,8 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
 
         MutableComponent duplicates = Component.empty();
         if (!this.multiKeyBinding.getKey().equals(InputConstants.UNKNOWN)) {
-            List<InputConstants.Key> modifiers = ModifierManager.getModifiers(this.multiKeyBinding.getId().toString());
-            String selfKeyName = this.multiKeyBinding.getKey().getName();
-
             for (KeyMapping kb : MultiKeyBindingManager.getGameOptions().keyMappings) {
-                if (!kb.isUnbound() && kb.saveString().equals(selfKeyName)
-                        && ModifierManager.modifiersEqual(modifiers,
-                                ModifierManager.getModifiers(kb.getName()))) {
+                if (!kb.isUnbound() && ModifierManager.bindingsConflict(kb, this.multiKeyBinding)) {
                     if (this.duplicate) {
                         duplicates.append(", ");
                     }
@@ -212,9 +207,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
             for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
                 if (!mkb.getId().equals(this.multiKeyBinding.getId())
                         && !mkb.getKey().equals(InputConstants.UNKNOWN)
-                        && mkb.getKey().getName().equals(selfKeyName)
-                        && ModifierManager.modifiersEqual(modifiers,
-                                ModifierManager.getModifiers(mkb.getId().toString()))) {
+                        && ModifierManager.bindingsConflict(this.multiKeyBinding, mkb)) {
                     if (this.duplicate) {
                         duplicates.append(", ");
                     }

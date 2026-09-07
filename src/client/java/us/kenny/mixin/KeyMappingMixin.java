@@ -243,9 +243,7 @@ public abstract class KeyMappingMixin {
 
     @Inject(method = "same", at = @At("HEAD"), cancellable = true)
     private void onSame(KeyMapping other, CallbackInfoReturnable<Boolean> cir) {
-        if (!ModifierManager.modifiersEqual(
-                ModifierManager.getModifiers(this.getName()),
-                ModifierManager.getModifiers(other.getName()))) {
+        if (!ModifierManager.bindingsConflict((KeyMapping) (Object) this, other)) {
             cir.setReturnValue(false);
         }
     }

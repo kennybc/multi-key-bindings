@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
@@ -38,8 +39,7 @@ public abstract class DisplayModeMixin {
         return init(name, id, entry -> {
             for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
                 if (!mkb.getKey().equals(InputConstants.UNKNOWN) &&
-                        mkb.getKey().getName()
-                                .equals(entry.getKey().saveString())) {
+                        ModifierManager.bindingsConflict(entry.getKey(), mkb)) {
                     return true;
                 }
             }
@@ -65,16 +65,14 @@ public abstract class DisplayModeMixin {
             }
             case CONFLICTING -> {
                 for (KeyMapping kb : MultiKeyBindingManager.getGameOptions().keyMappings) {
-                    if (!kb.isUnbound() && kb.saveString()
-                            .equals(multiKeyBinding.getKey().getName())) {
+                    if (!kb.isUnbound() && ModifierManager.bindingsConflict(kb, multiKeyBinding)) {
                         return true;
                     }
                 }
 
                 for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
                     if (!mkb.getId().equals(multiKeyBinding.getId()) && !mkb.getKey().equals(InputConstants.UNKNOWN) &&
-                            mkb.getKey().getName()
-                                    .equals(multiKeyBinding.getKey().getName())) {
+                            ModifierManager.bindingsConflict(multiKeyBinding, mkb)) {
                         return true;
                     }
                 }

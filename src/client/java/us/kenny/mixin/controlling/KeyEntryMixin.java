@@ -193,14 +193,10 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
             this.hasCollision = false;
             return;
         }
-        String boundKeyName = this.key.saveString();
-        List<InputConstants.Key> keyModifiers = ModifierManager.getModifiers(this.key.getName());
         for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
             if (mkb.isUnbound()
                     || HiddenBindingManager.isHidden(mkb.getAction())
-                    || !mkb.getKey().getName().equals(boundKeyName)
-                    || !ModifierManager.modifiersEqual(keyModifiers,
-                            ModifierManager.getModifiers(mkb.getId().toString()))) {
+                    || !ModifierManager.bindingsConflict(this.key, mkb)) {
                 continue;
             }
             if (this.hasCollision) {

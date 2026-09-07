@@ -249,9 +249,7 @@ public abstract class KeyMappingMixin {
             cir.setReturnValue(false);
             return;
         }
-        if (!ModifierManager.modifiersEqual(
-                ModifierManager.getModifiers(this.getName()),
-                ModifierManager.getModifiers(other.getName()))) {
+        if (!ModifierManager.bindingsConflict((KeyMapping) (Object) this, other)) {
             cir.setReturnValue(false);
         }
     }

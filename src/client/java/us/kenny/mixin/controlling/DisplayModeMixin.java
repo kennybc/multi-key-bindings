@@ -15,11 +15,11 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import us.kenny.HiddenBindingManager;
+import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
 import us.kenny.core.controlling.ControllingHideableKeyEntry;
-import us.kenny.mixin.KeyMappingAccessor;
 
 import java.util.Collection;
 import java.util.function.Predicate;
@@ -43,8 +43,7 @@ public abstract class DisplayModeMixin {
 
             for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
                 if (!mkb.getKey().equals(InputConstants.UNKNOWN) &&
-                        mkb.getKey().getName()
-                                .equals(thisKey.getName())) {
+                        ModifierManager.bindingsConflict(thisKey, mkb)) {
                     return true;
                 }
             }
@@ -52,8 +51,7 @@ public abstract class DisplayModeMixin {
             for (KeyMapping thatKey : Minecraft.getInstance().options.keyMappings) {
                 if (!thatKey.isUnbound() && !HiddenBindingManager.isHidden(thatKey.getName())
                         && !thatKey.getName().equals(thisKey.getName())
-                        && ((KeyMappingAccessor) thatKey).getBoundKey()
-                                .getValue() == ((KeyMappingAccessor) thisKey).getBoundKey().getValue()) {
+                        && ModifierManager.bindingsConflict(thisKey, thatKey)) {
                     return true;
                 }
             }
@@ -80,16 +78,14 @@ public abstract class DisplayModeMixin {
             }
             case CONFLICTING -> {
                 for (KeyMapping kb : MultiKeyBindingManager.getGameOptions().keyMappings) {
-                    if (!kb.isUnbound() && kb.saveString()
-                            .equals(multiKeyBinding.getKey().getName())) {
+                    if (!kb.isUnbound() && ModifierManager.bindingsConflict(kb, multiKeyBinding)) {
                         return true;
                     }
                 }
 
                 for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
                     if (!mkb.getId().equals(multiKeyBinding.getId()) && !mkb.getKey().equals(InputConstants.UNKNOWN) &&
-                            mkb.getKey().getName()
-                                    .equals(multiKeyBinding.getKey().getName())) {
+                            ModifierManager.bindingsConflict(multiKeyBinding, mkb)) {
                         return true;
                     }
                 }

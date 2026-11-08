@@ -116,7 +116,11 @@ public final class ProfileManager {
     static String readActiveFromIndex() {
         JsonObject json = readIndex();
         if (json != null && json.has("active_profile")) {
-            return json.get("active_profile").getAsString();
+            JsonElement el = json.get("active_profile");
+            if (el.isJsonPrimitive() && el.getAsJsonPrimitive().isString()) {
+                return el.getAsString();
+            }
+            MultiKeyBindingClient.LOGGER.warn("Ignoring non-string active_profile in config.json: {}", el);
         }
         return DEFAULT_PROFILE;
     }
@@ -129,7 +133,16 @@ public final class ProfileManager {
         Set<String> hidden = new LinkedHashSet<>();
         JsonObject json = readIndex();
         if (json != null && json.has("hidden")) {
-            json.getAsJsonArray("hidden").forEach(el -> hidden.add(el.getAsString()));
+            JsonElement el = json.get("hidden");
+            if (!el.isJsonArray()) {
+                MultiKeyBindingClient.LOGGER.warn("Ignoring non-array hidden field in config.json: {}", el);
+                return hidden;
+            }
+            for (JsonElement entry : el.getAsJsonArray()) {
+                if (entry.isJsonPrimitive() && entry.getAsJsonPrimitive().isString()) {
+                    hidden.add(entry.getAsString());
+                }
+            }
         }
         return hidden;
     }
@@ -139,7 +152,8 @@ public final class ProfileManager {
             return null;
         }
         try (Reader reader = Files.newBufferedReader(INDEX)) {
-            return GSON.fromJson(reader, JsonObject.class);
+            JsonElement root = GSON.fromJson(reader, JsonElement.class);
+            return root != null && root.isJsonObject() ? root.getAsJsonObject() : null;
         } catch (IOException | RuntimeException e) {
             MultiKeyBindingClient.LOGGER.error("Failed to read config.json", e);
             return null;
@@ -308,19 +322,70 @@ public final class ProfileManager {
         }
 
         String requested = readActiveFromIndex();
-        List<String> profiles = listProfileNames();
-        String active = profiles.stream()
-                .filter(p -> p.equalsIgnoreCase(requested))
-                .findFirst()
-                .orElseGet(() -> profiles.stream()
-                        .filter(p -> p.equalsIgnoreCase(DEFAULT_PROFILE))
-                        .findFirst()
-                        .orElse(profiles.isEmpty() ? DEFAULT_PROFILE : profiles.get(0)));
+        String active = pickReadableProfile(requested);
+        if (active == null) {
+            // Every profile on disk is unreadable. Leave those files alone and
+            // start from a fresh profile under an unused name.
+            active = uniqueName(DEFAULT_PROFILE);
+            MultiKeyBindingClient.LOGGER.error(
+                    "No readable profiles found; starting fresh profile '{}'. Unreadable files were left untouched.",
+                    active);
+            writeProfile(snapshotCurrent(active));
+        } else if (!active.equalsIgnoreCase(requested)) {
+            MultiKeyBindingClient.LOGGER.warn("Active profile '{}' is missing or unreadable; using '{}' instead.",
+                    requested, active);
+        }
+        // Set before load so load() doesn't save the in-memory state over the
+        // outgoing (placeholder) profile name.
         activeProfileName = active;
         load(active);
         if (!Files.exists(INDEX)) {
             writeIndex(active);
         }
+    }
+
+    /**
+     * Choose the profile to activate at startup: the requested one if it can
+     * be read, else "default", else the first readable profile. Returns null
+     * if none can be read. Unreadable files are never modified.
+     *
+     * @param requested The profile named in config.json.
+     */
+    private static String pickReadableProfile(String requested) {
+        List<String> candidates = new ArrayList<>();
+        String resolvedRequested = resolveName(requested);
+        if (resolvedRequested != null) {
+            candidates.add(resolvedRequested);
+        }
+        String resolvedDefault = resolveName(DEFAULT_PROFILE);
+        if (resolvedDefault != null && !candidates.contains(resolvedDefault)) {
+            candidates.add(resolvedDefault);
+        }
+        for (String name : listProfileNames()) {
+            if (!candidates.contains(name)) {
+                candidates.add(name);
+            }
+        }
+        for (String name : candidates) {
+            if (readProfile(name) != null) {
+                return name;
+            }
+            MultiKeyBindingClient.LOGGER.error("Profile '{}' could not be read; skipping it.", name);
+        }
+        return null;
+    }
+
+    /**
+     * Return base, or base_2, base_3, ... whichever doesn't exist yet.
+     */
+    private static String uniqueName(String base) {
+        List<String> existing = listProfileNames();
+        String name = base;
+        int n = 2;
+        while (ProfileNameValidator.isTaken(name, existing)) {
+            name = base + "_" + n++;
+        }
+        return name;
     }
 
     private static void migrateLegacyIfPresent() {
@@ -434,17 +499,19 @@ public final class ProfileManager {
             java.util.Set<String> seen = new java.util.HashSet<>();
             for (net.minecraft.client.KeyMapping mapping : options.keyMappings) {
                 String translationKey = mapping.getName();
-                if (!vanilla.has(translationKey)) {
+                String keyName = stringOrNull(vanilla.get(translationKey));
+                if (keyName == null) {
+                    if (vanilla.has(translationKey)) {
+                        MultiKeyBindingClient.LOGGER.warn("Skipping malformed vanilla entry for {} in profile {}",
+                                translationKey, profile.getName());
+                    }
                     continue;
                 }
-                String keyName = vanilla.get(translationKey).getAsString();
-                com.mojang.blaze3d.platform.InputConstants.Key key = com.mojang.blaze3d.platform.InputConstants
-                        .getKey(keyName);
-                mapping.setKey(key);
+                mapping.setKey(InputConstants.getKey(keyName));
                 seen.add(translationKey);
             }
             for (String recorded : vanilla.keySet()) {
-                if (!seen.contains(recorded)) {
+                if (!seen.contains(recorded) && !vanilla.get(recorded).isJsonNull()) {
                     MultiKeyBindingClient.LOGGER.info(
                             "Skipping stale profile entry for unregistered key mapping: {}", recorded);
                 }
@@ -453,21 +520,47 @@ public final class ProfileManager {
 
         // Populate modifiers
         for (var entry : profile.getModifiers().entrySet()) {
-            List<InputConstants.Key> modifiers = ConfigManager.parseModifiers(entry.getValue().getAsJsonArray());
-            if (!modifiers.isEmpty()) {
-                ModifierManager.setModifiers(entry.getKey(), modifiers);
+            try {
+                List<InputConstants.Key> modifiers = ConfigManager.parseModifiers(entry.getValue().getAsJsonArray());
+                if (!modifiers.isEmpty()) {
+                    ModifierManager.setModifiers(entry.getKey(), modifiers);
+                }
+            } catch (RuntimeException e) {
+                MultiKeyBindingClient.LOGGER.warn("Skipping malformed modifier entry {} in profile {}: {}",
+                        entry.getKey(), profile.getName(), e.toString());
             }
         }
+
+        // Populate custom bindings. A malformed entry is skipped rather than
+        // aborting the whole profile (which would leave every later binding
+        // unloaded, and crash the game when it happens at startup).
         for (JsonElement element : profile.getBindings()) {
-            JsonObject keyBindingJson = element.getAsJsonObject();
-            UUID id = UUID.fromString(keyBindingJson.get("id").getAsString());
-            String action = keyBindingJson.get("action").getAsString();
-            String translationKey = keyBindingJson.get("key").getAsString();
-            MultiKeyBindingManager.addKeyBinding(action, null, translationKey, id);
-            if (keyBindingJson.has("primary") && keyBindingJson.get("primary").getAsBoolean()) {
-                ToggleManager.setPrimary(action, id);
+            try {
+                JsonObject keyBindingJson = element.getAsJsonObject();
+                String idString = stringOrNull(keyBindingJson.get("id"));
+                String action = stringOrNull(keyBindingJson.get("action"));
+                String translationKey = stringOrNull(keyBindingJson.get("key"));
+                if (idString == null || action == null || translationKey == null) {
+                    MultiKeyBindingClient.LOGGER.warn("Skipping binding with missing id/action/key in profile {}: {}",
+                            profile.getName(), element);
+                    continue;
+                }
+                UUID id = UUID.fromString(idString);
+                MultiKeyBindingManager.addKeyBinding(action, null, translationKey, id);
+                JsonElement primary = keyBindingJson.get("primary");
+                if (primary != null && primary.isJsonPrimitive() && primary.getAsJsonPrimitive().isBoolean()
+                        && primary.getAsBoolean()) {
+                    ToggleManager.setPrimary(action, id);
+                }
+            } catch (RuntimeException e) {
+                MultiKeyBindingClient.LOGGER.warn("Skipping malformed binding in profile {}: {} ({})",
+                        profile.getName(), element, e.toString());
             }
         }
+    }
+
+    private static String stringOrNull(JsonElement el) {
+        return el != null && el.isJsonPrimitive() && el.getAsJsonPrimitive().isString() ? el.getAsString() : null;
     }
 
     /**

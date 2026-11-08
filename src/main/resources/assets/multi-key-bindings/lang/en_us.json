@@ -54,6 +54,7 @@
   "multi.profile.command.error.not_found": "Profile \"%s\" not found.",
   "multi.profile.command.error.invalid_name": "Invalid profile name (letters, numbers, - and _ only, max 32).",
   "multi.profile.command.error.exists": "Profile \"%s\" already exists.",
+  "multi.profile.command.error.unreadable": "Profile \"%s\" could not be read (invalid file). Check the log.",
   "multi.profile.command.error.rename_failed": "Could not rename \"%s\" to \"%s\".",
   "multi.profile.dialog.taken": "A profile with that name already exists",
   "multi.profile.command.error.delete_active": "Cannot delete the active profile. Switch first."

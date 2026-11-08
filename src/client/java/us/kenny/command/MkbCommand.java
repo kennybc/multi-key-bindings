@@ -144,8 +144,12 @@ public final class MkbCommand {
 
     private static int load(FabricClientCommandSource src, String name) {
         String resolved = ProfileManager.resolveName(name);
-        if (resolved == null || !ProfileManager.load(resolved)) {
+        if (resolved == null) {
             src.sendError(Component.translatable("multi.profile.command.error.not_found", nameArg(name)));
+            return 0;
+        }
+        if (!ProfileManager.load(resolved)) {
+            src.sendError(Component.translatable("multi.profile.command.error.unreadable", nameArg(resolved)));
             return 0;
         }
         src.sendFeedback(Component.translatable("multi.profile.command.loaded", nameArg(resolved)));

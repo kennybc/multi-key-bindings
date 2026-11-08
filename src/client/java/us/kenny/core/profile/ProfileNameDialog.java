@@ -8,6 +8,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * Modal-style overlay for entering a new or renamed profile name. Dims
@@ -18,17 +19,45 @@ public final class ProfileNameDialog extends Screen {
     private final Component confirmText;
     private final String initialValue;
     private final Consumer<String> onSubmit;
+    private final Predicate<String> isTaken;
 
     private EditBox nameField;
     private Button confirmButton;
 
+    /**
+     * @param isTaken Returns true when a candidate name would clash with an
+     *                existing profile. Taken names disable the confirm button
+     *                and show an error hint instead of failing silently.
+     */
     public ProfileNameDialog(Screen parent, Component title, Component confirm,
-            String initialValue, Consumer<String> onSubmit) {
+            String initialValue, Predicate<String> isTaken, Consumer<String> onSubmit) {
         super(title);
         this.parent = parent;
         this.confirmText = confirm;
         this.initialValue = initialValue;
+        this.isTaken = isTaken;
         this.onSubmit = onSubmit;
+    }
+
+    /**
+     * Taken-name predicate for creating a new profile: any existing name,
+     * compared case-insensitively.
+     */
+    public static Predicate<String> takenForCreate() {
+        return name -> ProfileNameValidator.isTaken(name, us.kenny.ProfileManager.listProfileNames());
+    }
+
+    /**
+     * Taken-name predicate for renaming {@code currentName}: any other existing
+     * name. A case-only change of the profile's own name is allowed.
+     */
+    public static Predicate<String> takenForRename(String currentName) {
+        return name -> !name.equalsIgnoreCase(currentName)
+                && ProfileNameValidator.isTaken(name, us.kenny.ProfileManager.listProfileNames());
+    }
+
+    private boolean isAcceptable(String value) {
+        return ProfileNameValidator.isValid(value) && !isTaken.test(value);
     }
 
     @Override
@@ -58,11 +87,11 @@ public final class ProfileNameDialog extends Screen {
     }
 
     private void updateConfirmEnabled() {
-        this.confirmButton.active = ProfileNameValidator.isValid(this.nameField.getValue());
+        this.confirmButton.active = isAcceptable(this.nameField.getValue());
     }
 
     private void submit() {
-        if (!ProfileNameValidator.isValid(this.nameField.getValue())) {
+        if (!isAcceptable(this.nameField.getValue())) {
             return;
         }
         this.onSubmit.accept(this.nameField.getValue());
@@ -77,8 +106,10 @@ public final class ProfileNameDialog extends Screen {
         int cy = this.height / 2;
         gfx.text(this.font, this.title, cx - this.font.width(this.title) / 2, cy - 50, 0xFFFFFFFF);
 
-        Component hint = Component.translatable("multi.profile.dialog.hint");
-        gfx.text(this.font, hint, cx - this.font.width(hint) / 2, cy + 5, 0xFF999999);
+        String value = this.nameField == null ? "" : this.nameField.getValue();
+        boolean taken = ProfileNameValidator.isValid(value) && isTaken.test(value);
+        Component hint = Component.translatable(taken ? "multi.profile.dialog.taken" : "multi.profile.dialog.hint");
+        gfx.text(this.font, hint, cx - this.font.width(hint) / 2, cy + 5, taken ? 0xFFFF5555 : 0xFF999999);
 
         super.extractRenderState(gfx, mouseX, mouseY, partialTicks);
     }

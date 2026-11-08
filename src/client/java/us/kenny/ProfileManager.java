@@ -92,6 +92,24 @@ public final class ProfileManager {
     }
 
     /**
+     * Resolve a user-supplied profile name to the exact on-disk name,
+     * matching case-insensitively. Returns null if no such profile exists.
+     *
+     * @param name The name to resolve.
+     */
+    public static String resolveName(String name) {
+        if (name == null) {
+            return null;
+        }
+        for (String existing : listProfileNames()) {
+            if (existing.equalsIgnoreCase(name)) {
+                return existing;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Read the active_profile field from the index file, falling back to
      * "default" if the file is missing or malformed.
      */
@@ -350,7 +368,12 @@ public final class ProfileManager {
      *
      * @param name The profile to load.
      */
-    public static boolean load(String name) {
+    public static boolean load(String requestedName) {
+        String name = resolveName(requestedName);
+        if (name == null) {
+            MultiKeyBindingClient.LOGGER.warn("Profile not found: {}", requestedName);
+            return false;
+        }
         Profile profile = readProfile(name);
         if (profile == null) {
             MultiKeyBindingClient.LOGGER.warn("Profile not found: {}", name);
@@ -482,8 +505,9 @@ public final class ProfileManager {
      *
      * @param name The profile to delete.
      */
-    public static boolean delete(String name) {
-        if (name.equalsIgnoreCase(activeProfileName)) {
+    public static boolean delete(String requestedName) {
+        String name = resolveName(requestedName);
+        if (name == null || name.equalsIgnoreCase(activeProfileName)) {
             return false;
         }
         try {
@@ -500,8 +524,12 @@ public final class ProfileManager {
      * @param oldName The existing profile name.
      * @param newName The new name to give it.
      */
-    public static boolean rename(String oldName, String newName) {
+    public static boolean rename(String requestedOldName, String newName) {
         if (!ProfileNameValidator.isValid(newName)) {
+            return false;
+        }
+        String oldName = resolveName(requestedOldName);
+        if (oldName == null) {
             return false;
         }
         if (!oldName.equalsIgnoreCase(newName) && ProfileNameValidator.isTaken(newName, listProfileNames())) {
@@ -534,8 +562,9 @@ public final class ProfileManager {
      * @param name    The profile to duplicate.
      * @param newName The name of the new copy, or null to auto-name.
      */
-    public static String duplicate(String name, String newName) {
-        if (!Files.exists(getProfilePath(name))) {
+    public static String duplicate(String requestedName, String newName) {
+        String name = resolveName(requestedName);
+        if (name == null) {
             return null;
         }
         String target = newName;

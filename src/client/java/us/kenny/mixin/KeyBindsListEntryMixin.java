@@ -179,7 +179,7 @@ public abstract class KeyBindsListEntryMixin extends KeyBindsList.Entry {
         }
         for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
             if (mkb.isUnbound()
-                    || HiddenBindingManager.isHidden(mkb.getAction())
+                    || HiddenBindingManager.isActionHidden(mkb.getAction())
                     || !ModifierManager.bindingsConflict(this.key, mkb)) {
                 continue;
             }

@@ -126,6 +126,17 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen  {
     }
 
     /**
+     * @see us.kenny.mixin.KeyBindsScreenMixin#mouseScrolled
+     */
+    @Inject(method = "mouseScrolled", at = @At("HEAD"), cancellable = true, remap = false)
+    private void onMouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY,
+            CallbackInfoReturnable<Boolean> cir) {
+        if (mkbProfileController().handleMouseScroll(mouseX, mouseY, scrollY)) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    /**
      * @see us.kenny.mixin.KeyBindsScreenMixin#onMouseClicked
      */
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true, remap = false)

@@ -40,10 +40,14 @@ public abstract class DisplayModeMixin {
     private static DisplayMode onConflicting(String name, int id, Predicate<KeyEntry> predicate) {
         return init(name, id, entry -> {
             KeyMapping thisKey = entry.getKey();
+            if (HiddenBindingManager.isHidden(thisKey.getName())) {
+                return false;
+            }
 
             for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
-                if (!mkb.getKey().equals(InputConstants.UNKNOWN) &&
-                        ModifierManager.bindingsConflict(thisKey, mkb)) {
+                if (!mkb.getKey().equals(InputConstants.UNKNOWN)
+                        && !HiddenBindingManager.isActionHidden(mkb.getAction())
+                        && ModifierManager.bindingsConflict(thisKey, mkb)) {
                     return true;
                 }
             }
@@ -77,15 +81,20 @@ public abstract class DisplayModeMixin {
                 return multiKeyBinding.getKey().equals(InputConstants.UNKNOWN);
             }
             case CONFLICTING -> {
+                if (HiddenBindingManager.isActionHidden(multiKeyBinding.getAction())) {
+                    return false;
+                }
                 for (KeyMapping kb : MultiKeyBindingManager.getGameOptions().keyMappings) {
-                    if (!kb.isUnbound() && ModifierManager.bindingsConflict(kb, multiKeyBinding)) {
+                    if (!kb.isUnbound() && !HiddenBindingManager.isHidden(kb.getName())
+                            && ModifierManager.bindingsConflict(kb, multiKeyBinding)) {
                         return true;
                     }
                 }
 
                 for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
-                    if (!mkb.getId().equals(multiKeyBinding.getId()) && !mkb.getKey().equals(InputConstants.UNKNOWN) &&
-                            ModifierManager.bindingsConflict(multiKeyBinding, mkb)) {
+                    if (!mkb.getId().equals(multiKeyBinding.getId()) && !mkb.getKey().equals(InputConstants.UNKNOWN)
+                            && !HiddenBindingManager.isActionHidden(mkb.getAction())
+                            && ModifierManager.bindingsConflict(multiKeyBinding, mkb)) {
                         return true;
                     }
                 }

@@ -21,6 +21,15 @@ public final class HiddenBindingManager {
     }
 
     /**
+     * Check whether a custom binding's action is hidden.
+     *
+     * @param action The MultiKeyBinding action.
+     */
+    public static boolean isActionHidden(String action) {
+        return hidden.contains(action) || hidden.contains(ToggleManager.stripMultiPrefix(action));
+    }
+
+    /**
      * Get the current hidden set as an unmodifiable view.
      */
     public static Set<String> getAll() {

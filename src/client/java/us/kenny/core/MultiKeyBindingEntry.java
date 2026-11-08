@@ -221,9 +221,12 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
         this.duplicate = false;
 
         MutableComponent duplicates = Component.empty();
-        if (!this.multiKeyBinding.getKey().equals(InputConstants.UNKNOWN)) {
+        // Hidden bindings neither show nor cause conflict markers.
+        if (!this.multiKeyBinding.getKey().equals(InputConstants.UNKNOWN)
+                && !HiddenBindingManager.isActionHidden(this.multiKeyBinding.getAction())) {
             for (KeyMapping kb : MultiKeyBindingManager.getGameOptions().keyMappings) {
-                if (!kb.isUnbound() && ModifierManager.bindingsConflict(kb, this.multiKeyBinding)) {
+                if (!kb.isUnbound() && !HiddenBindingManager.isHidden(kb.getName())
+                        && ModifierManager.bindingsConflict(kb, this.multiKeyBinding)) {
                     if (this.duplicate) {
                         duplicates.append(", ");
                     }
@@ -236,6 +239,7 @@ public class MultiKeyBindingEntry extends KeyBindsList.Entry {
             for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
                 if (!mkb.getId().equals(this.multiKeyBinding.getId())
                         && !mkb.getKey().equals(InputConstants.UNKNOWN)
+                        && !HiddenBindingManager.isActionHidden(mkb.getAction())
                         && ModifierManager.bindingsConflict(this.multiKeyBinding, mkb)) {
                     if (this.duplicate) {
                         duplicates.append(", ");

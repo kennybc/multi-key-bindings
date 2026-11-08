@@ -143,25 +143,38 @@ public final class MkbCommand {
     }
 
     private static int load(FabricClientCommandSource src, String name) {
-        if (!ProfileManager.load(name)) {
+        String resolved = ProfileManager.resolveName(name);
+        if (resolved == null || !ProfileManager.load(resolved)) {
             src.sendError(Component.translatable("multi.profile.command.error.not_found", nameArg(name)));
             return 0;
         }
-        src.sendFeedback(Component.translatable("multi.profile.command.loaded", nameArg(name)));
+        src.sendFeedback(Component.translatable("multi.profile.command.loaded", nameArg(resolved)));
         return 1;
     }
 
     private static int rename(FabricClientCommandSource src, String oldName, String newName) {
+        String resolved = ProfileManager.resolveName(oldName);
+        if (resolved == null) {
+            src.sendError(Component.translatable("multi.profile.command.error.not_found", nameArg(oldName)));
+            return 0;
+        }
         if (!ProfileNameValidator.isValid(newName)) {
             src.sendError(Component.translatable("multi.profile.command.error.invalid_name"));
             return 0;
         }
-        if (!ProfileManager.rename(oldName, newName)) {
-            src.sendError(Component.translatable("multi.profile.command.error.not_found", nameArg(oldName)));
+        // A case-only rename of the same profile is allowed.
+        if (!resolved.equalsIgnoreCase(newName)
+                && ProfileNameValidator.isTaken(newName, ProfileManager.listProfileNames())) {
+            src.sendError(Component.translatable("multi.profile.command.error.exists", nameArg(newName)));
+            return 0;
+        }
+        if (!ProfileManager.rename(resolved, newName)) {
+            src.sendError(Component.translatable("multi.profile.command.error.rename_failed",
+                    nameArg(resolved), nameArg(newName)));
             return 0;
         }
         src.sendFeedback(Component.translatable("multi.profile.command.renamed",
-                nameArg(oldName), nameArg(newName)));
+                nameArg(resolved), nameArg(newName)));
         return 1;
     }
 
@@ -174,13 +187,14 @@ public final class MkbCommand {
             src.sendError(Component.translatable("multi.profile.command.error.exists", nameArg(newName)));
             return 0;
         }
-        String resolved = ProfileManager.duplicate(name, newName);
+        String source = ProfileManager.resolveName(name);
+        String resolved = source == null ? null : ProfileManager.duplicate(source, newName);
         if (resolved == null) {
             src.sendError(Component.translatable("multi.profile.command.error.not_found", nameArg(name)));
             return 0;
         }
         src.sendFeedback(Component.translatable("multi.profile.command.duplicated",
-                nameArg(name), nameArg(resolved)));
+                nameArg(source), nameArg(resolved)));
         return 1;
     }
 
@@ -189,11 +203,12 @@ public final class MkbCommand {
             src.sendError(Component.translatable("multi.profile.command.error.delete_active"));
             return 0;
         }
-        if (!ProfileManager.delete(name)) {
+        String resolved = ProfileManager.resolveName(name);
+        if (resolved == null || !ProfileManager.delete(resolved)) {
             src.sendError(Component.translatable("multi.profile.command.error.not_found", nameArg(name)));
             return 0;
         }
-        src.sendFeedback(Component.translatable("multi.profile.command.deleted", nameArg(name)));
+        src.sendFeedback(Component.translatable("multi.profile.command.deleted", nameArg(resolved)));
         return 1;
     }
 }

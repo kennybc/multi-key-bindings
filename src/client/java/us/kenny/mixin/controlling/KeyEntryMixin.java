@@ -195,7 +195,7 @@ public abstract class KeyEntryMixin extends KeyBindsList.Entry implements Contro
         }
         for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
             if (mkb.isUnbound()
-                    || HiddenBindingManager.isHidden(mkb.getAction())
+                    || HiddenBindingManager.isActionHidden(mkb.getAction())
                     || !ModifierManager.bindingsConflict(this.key, mkb)) {
                 continue;
             }

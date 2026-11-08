@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.5 (Sep 16, 2026)
+- Support for mouse binds on screen actions
+- Fix collisions on debug keys
+
 ## 1.3.4 (May 23, 2026)
 
 - Add custom key binding entry for toggling auto-jump

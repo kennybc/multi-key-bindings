@@ -1,6 +1,6 @@
 package us.kenny.core.profile;
 
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -161,11 +161,11 @@ public final class ProfilePopupMenu {
      *
      * @param mouseX Screen-space X.
      * @param mouseY Screen-space Y.
-     * @param button GLFW mouse button.
+     * @param button Mouse button.
      * @return true if a row consumed the click.
      */
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        if (button != InputConstants.MOUSE_BUTTON_LEFT) {
             return false;
         }
         int rowY = y + PADDING;

@@ -176,16 +176,15 @@ public class ToggleManager {
         // the option flip so the needsToggle / isToggleMode checks still see
         // toggle mode.
         if (!newState) {
-            Window window = Minecraft.getInstance().getWindow();
             KeyMapping baseMapping = KeyMapping.get(baseAction);
             if (baseMapping instanceof ToggleKeyMapping
                     && ((ToggleKeyMappingAccessor) (Object) baseMapping).getNeedsToggle().getAsBoolean()) {
                 InputConstants.Key boundKey = ((KeyMappingAccessor) baseMapping).getBoundKey();
-                ((KeyMappingAccessor) baseMapping).setIsDown(InputConstants.isKeyDown(window, boundKey.getValue()));
+                ((KeyMappingAccessor) baseMapping).setIsDown(InputConstants.isKeyDown(boundKey.getValue()));
             }
             for (MultiKeyBinding binding : MultiKeyBindingManager.getKeyBindings(baseAction)) {
                 if (binding instanceof StickyMultiKeyBinding sticky && sticky.isToggleMode()) {
-                    sticky.forceSetPressed(InputConstants.isKeyDown(window, binding.getKey().getValue()));
+                    sticky.forceSetPressed(InputConstants.isKeyDown(binding.getKey().getValue()));
                 }
             }
         }

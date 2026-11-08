@@ -6,11 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.lwjgl.glfw.GLFW;
-
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -19,12 +16,12 @@ import us.kenny.mixin.KeyMappingAccessor;
 
 public class ModifierManager {
     private static final List<InputConstants.Key> ALL_MODIFIERS = List.of(
-            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_LEFT_SHIFT),
-            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_RIGHT_SHIFT),
-            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_LEFT_CONTROL),
-            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_RIGHT_CONTROL),
-            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_LEFT_ALT),
-            InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_RIGHT_ALT));
+            InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_LSHIFT),
+            InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_RSHIFT),
+            InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_LCONTROL),
+            InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_RCONTROL),
+            InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_LALT),
+            InputConstants.Type.KEYBOARD.getOrCreate(InputConstants.KEY_RALT));
     private static final Map<String, List<InputConstants.Key>> KEY_MODIFIERS = new HashMap<>();
 
     /**
@@ -48,11 +45,10 @@ public class ModifierManager {
      */
     public static boolean areModifiersActive(String id, InputConstants.Key boundKey, boolean exact) {
         List<InputConstants.Key> required = KEY_MODIFIERS.getOrDefault(id, List.of());
-        var window = Minecraft.getInstance().getWindow();
 
         int activeCount = 0;
         for (InputConstants.Key modifier : ALL_MODIFIERS) {
-            if (modifier.equals(boundKey) || !InputConstants.isKeyDown(window, modifier.getValue())) {
+            if (modifier.equals(boundKey) || !InputConstants.isKeyDown(modifier.getValue())) {
                 continue;
             }
             if (required.contains(modifier)) {

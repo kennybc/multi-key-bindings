@@ -23,4 +23,4 @@ Created for Minecraft versions 1.20.x, 1.21.x, and 26.1.x
 
 <br>
 
-> _Note that there are niche limitations: e.g. if you set action "Open Inventory" to a mouse button, pressing that mouse button cannot close the inventory as a key would. Similarly, if binding a key to "Pick Block", you will not be able to drag to duplicate a block the way you would be able to with a mouse bind._
+> _Note that there are niche limitations: e.g. if binding a key to "Pick Block", you will not be able to drag to duplicate a block the way you would be able to with a mouse bind._

@@ -117,6 +117,7 @@ public final class ManageProfilesScreen extends Screen {
                 Component.translatable("multi.profile.dialog.new.title"),
                 Component.translatable("multi.profile.dialog.create"),
                 "",
+                ProfileNameDialog.takenForCreate(),
                 name -> {
                     ProfileManager.create(name);
                     Minecraft.getInstance().setScreenAndShow(new ManageProfilesScreen(parentSupplier));
@@ -134,6 +135,7 @@ public final class ManageProfilesScreen extends Screen {
                 Component.translatable("multi.profile.dialog.rename.title"),
                 Component.translatable("multi.profile.dialog.rename.confirm"),
                 currentName,
+                ProfileNameDialog.takenForRename(currentName),
                 newName -> {
                     ProfileManager.rename(currentName, newName);
                     Minecraft.getInstance().setScreenAndShow(new ManageProfilesScreen(parentSupplier));

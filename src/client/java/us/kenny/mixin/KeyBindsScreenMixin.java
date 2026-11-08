@@ -129,6 +129,19 @@ public abstract class KeyBindsScreenMixin extends Screen implements MultiKeyBind
     }
 
     /**
+     * Let the profile popup consume mouse-wheel events while it is open.
+     * KeyBindsScreen doesn't declare mouseScrolled, so this merges in as an
+     * override.
+     */
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (profileController().handleMouseScroll(mouseX, mouseY, scrollY)) {
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    /**
      * Injected in the method mouseClicked:
      * Updates selected custom key binding with whatever mouse button was pressed.
      */

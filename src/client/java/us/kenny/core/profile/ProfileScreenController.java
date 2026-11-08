@@ -96,7 +96,7 @@ public final class ProfileScreenController {
      * @param width The button's width, in pixels.
      */
     public Button buildDropdownButton(int width) {
-        this.dropdownButton = Button.builder(dropdownLabel(), b -> openMenu())
+        this.dropdownButton = Button.builder(dropdownLabel(width), b -> openMenu())
                 .bounds(0, 0, width, 20)
                 .build();
         return this.dropdownButton;
@@ -117,6 +117,23 @@ public final class ProfileScreenController {
         if (!consumed && !popup.containsPoint(event.x(), event.y())) {
             popup = null;
         }
+        return true;
+    }
+
+    /**
+     * Route a mouse-wheel event to the popup when it is open. Returns true
+     * (consumed) whenever the popup is open so the list underneath doesn't
+     * scroll while the menu is showing.
+     *
+     * @param mouseX  Screen-space X.
+     * @param mouseY  Screen-space Y.
+     * @param scrollY Vertical wheel delta.
+     */
+    public boolean handleMouseScroll(double mouseX, double mouseY, double scrollY) {
+        if (popup == null) {
+            return false;
+        }
+        popup.mouseScrolled(mouseX, mouseY, scrollY);
         return true;
     }
 
@@ -165,6 +182,7 @@ public final class ProfileScreenController {
                 Component.translatable("multi.profile.dialog.new.title"),
                 Component.translatable("multi.profile.dialog.create"),
                 "",
+                ProfileNameDialog.takenForCreate(),
                 name -> {
                     ProfileManager.create(name);
                     Minecraft.getInstance().setScreenAndShow(screenRebuilder.get());
@@ -176,7 +194,17 @@ public final class ProfileScreenController {
         Minecraft.getInstance().setScreenAndShow(new ManageProfilesScreen(screenRebuilder));
     }
 
-    private static Component dropdownLabel() {
-        return Component.literal(ProfileManager.getActiveProfileName() + " ▼");
+    /**
+     * The dropdown label: the active profile name, shortened with "..." so
+     * the name plus the arrow fits inside the button.
+     *
+     * @param buttonWidth The dropdown button's width, in pixels.
+     */
+    private static Component dropdownLabel(int buttonWidth) {
+        var font = Minecraft.getInstance().font;
+        String arrow = " \u25BC";
+        int available = buttonWidth - 8 - font.width(arrow);
+        String name = ProfilePopupMenu.ellipsize(font, ProfileManager.getActiveProfileName(), available);
+        return Component.literal(name + arrow);
     }
 }

@@ -137,7 +137,7 @@ public class ConfigManager {
      * @param keyCode The key code to convert.
      */
     private static String convertKeyCodeToKeyName(int keyCode) {
-        InputConstants.Type keyType = keyCode <= 10 ? InputConstants.Type.MOUSE : InputConstants.Type.KEYSYM;
+        InputConstants.Type keyType = keyCode <= 10 ? InputConstants.Type.MOUSE : InputConstants.Type.KEYBOARD;
         return keyType.getOrCreate(keyCode).getName();
     }
 }

@@ -169,10 +169,9 @@ public abstract class KeyMappingMixin {
     private static void onSetAll(CallbackInfo ci) {
         Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings();
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
-            if (multiKeyBinding.getKey().getType() == InputConstants.Type.KEYSYM
+            if (multiKeyBinding.getKey().getType() == InputConstants.Type.KEYBOARD
                     && multiKeyBinding.getKey().getValue() != InputConstants.UNKNOWN.getValue()) {
-                boolean keyDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow(),
-                        multiKeyBinding.getKey().getValue());
+                boolean keyDown = InputConstants.isKeyDown(multiKeyBinding.getKey().getValue());
                 multiKeyBinding.setPressed(keyDown
                         && ModifierManager.shouldActivate(multiKeyBinding.getId().toString(),
                                 multiKeyBinding.getKey()));
@@ -267,9 +266,8 @@ public abstract class KeyMappingMixin {
         Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager.getKeyBindings(this.getName());
         for (MultiKeyBinding multiKeyBinding : multiKeyBindings) {
             InputConstants.Key multiKey = multiKeyBinding.getKey();
-            boolean keyMatches = keyEvent.key() == InputConstants.UNKNOWN.getValue()
-                    ? multiKey.getType() == InputConstants.Type.SCANCODE && multiKey.getValue() == keyEvent.scancode()
-                    : multiKey.getType() == InputConstants.Type.KEYSYM && multiKey.getValue() == keyEvent.key();
+            boolean keyMatches = multiKey.getType() == InputConstants.Type.KEYBOARD
+                    && multiKey.getValue() == keyEvent.key() && !multiKeyBinding.isUnbound();
             String id = multiKeyBinding.getId().toString();
             if (keyMatches && (ModifierManager.getModifiers(id).isEmpty()
                     || ModifierManager.areModifiersActive(id, multiKeyBinding.getKey(), true))) {

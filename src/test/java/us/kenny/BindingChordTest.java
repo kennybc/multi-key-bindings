@@ -2,10 +2,6 @@ package us.kenny;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_B;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_F3;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_G;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
 
 import java.util.List;
 
@@ -14,10 +10,10 @@ import org.junit.jupiter.api.Test;
 import com.mojang.blaze3d.platform.InputConstants;
 
 class BindingChordTest {
-    private static final InputConstants.Key B = key(GLFW_KEY_B);
-    private static final InputConstants.Key F3 = key(GLFW_KEY_F3);
-    private static final InputConstants.Key G = key(GLFW_KEY_G);
-    private static final InputConstants.Key SHIFT = key(GLFW_KEY_LEFT_SHIFT);
+    private static final InputConstants.Key B = key(InputConstants.KEY_B);
+    private static final InputConstants.Key F3 = key(InputConstants.KEY_F3);
+    private static final InputConstants.Key G = key(InputConstants.KEY_G);
+    private static final InputConstants.Key SHIFT = key(InputConstants.KEY_LSHIFT);
 
     @Test
     void bareKeyDoesNotConflictWithDebugChord() {
@@ -60,6 +56,6 @@ class BindingChordTest {
     }
 
     private static InputConstants.Key key(int keyCode) {
-        return InputConstants.Type.KEYSYM.getOrCreate(keyCode);
+        return InputConstants.Type.KEYBOARD.getOrCreate(keyCode);
     }
 }

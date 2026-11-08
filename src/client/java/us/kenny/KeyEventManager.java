@@ -1,6 +1,6 @@
 package us.kenny;
 
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 /**
  * Tracks the GLFW action of the currently in-progress KeyboardHandler.keyPress
@@ -20,6 +20,6 @@ public final class KeyEventManager {
     }
 
     public static boolean isRepeat() {
-        return currentAction == GLFW.GLFW_REPEAT;
+        return currentAction == InputConstants.REPEAT;
     }
 }

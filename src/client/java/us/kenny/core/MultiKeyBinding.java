@@ -39,8 +39,8 @@ public class MultiKeyBinding {
     }
 
     public boolean shouldSetOnIngameFocus() {
-        return this.key.getType() == InputConstants.Type.KEYSYM
-                && this.key.getValue() != InputConstants.UNKNOWN.getValue();
+        return this.key.getType() == InputConstants.Type.KEYBOARD
+                && !this.isUnbound();
     }
 
     public UUID getId() {

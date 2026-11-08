@@ -55,7 +55,7 @@ public class StickyMultiKeyBinding extends MultiKeyBinding {
 
     public boolean shouldRestoreStateOnScreenClosed() {
         boolean bl = this.shouldRestore && this.toggleGetter.getAsBoolean()
-                && this.getKey().getType() == InputConstants.Type.KEYSYM && this.releasedByScreenWhenDown;
+                && this.getKey().getType() == InputConstants.Type.KEYBOARD && this.releasedByScreenWhenDown;
         this.releasedByScreenWhenDown = false;
         return bl;
     }

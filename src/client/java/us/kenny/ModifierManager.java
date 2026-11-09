@@ -169,6 +169,33 @@ public class ModifierManager {
     }
 
     /**
+     * Whether two vanilla key bindings conflict: same bound key and the same
+     * modifier chord.
+     */
+    public static boolean bindingsConflict(KeyMapping first, KeyMapping second) {
+        return first.saveString().equals(second.saveString())
+                && modifiersEqual(getModifiers(first.getName()), getModifiers(second.getName()));
+    }
+
+    /**
+     * Whether a vanilla and an additional key binding conflict: same bound key
+     * and the same modifier chord.
+     */
+    public static boolean bindingsConflict(KeyMapping first, MultiKeyBinding second) {
+        return first.saveString().equals(second.getKey().getName())
+                && modifiersEqual(getModifiers(first.getName()), getModifiers(second.getId().toString()));
+    }
+
+    /**
+     * Whether two additional key bindings conflict: same bound key and the
+     * same modifier chord.
+     */
+    public static boolean bindingsConflict(MultiKeyBinding first, MultiKeyBinding second) {
+        return first.getKey().getName().equals(second.getKey().getName())
+                && modifiersEqual(getModifiers(first.getId().toString()), getModifiers(second.getId().toString()));
+    }
+
+    /**
      * Build a display name for a key, prefixed with its required modifiers (e.g.
      * "Shift+Space").
      *
@@ -191,5 +218,12 @@ public class ModifierManager {
      */
     public static Map<String, List<InputConstants.Key>> getAllModifiers() {
         return Collections.unmodifiableMap(KEY_MODIFIERS);
+    }
+
+    /**
+     * Clear every configured modifier chord. Called during profile load.
+     */
+    public static void clearAll() {
+        KEY_MODIFIERS.clear();
     }
 }

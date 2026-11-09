@@ -6,6 +6,7 @@ import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,6 +14,8 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import us.kenny.HiddenBindingManager;
+import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
@@ -36,14 +39,28 @@ public abstract class DisplayModeMixin {
     @Redirect(method = "<clinit>()V", at = @At(value = "NEW", ordinal = 2, target = "Lcom/blamejared/controlling/api/DisplayMode;<init>(Ljava/lang/String;ILjava/util/function/Predicate;)Lcom/blamejared/controlling/api/DisplayMode;"))
     private static DisplayMode onConflicting(String name, int id, Predicate<KeyEntry> predicate) {
         return init(name, id, entry -> {
+            KeyMapping thisKey = entry.getKey();
+            if (HiddenBindingManager.isHidden(thisKey.getName())) {
+                return false;
+            }
+
             for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
-                if (!mkb.getKey().equals(InputConstants.UNKNOWN) &&
-                        mkb.getKey().getName()
-                                .equals(entry.getKey().saveString())) {
+                if (!mkb.getKey().equals(InputConstants.UNKNOWN)
+                        && !HiddenBindingManager.isActionHidden(mkb.getAction())
+                        && ModifierManager.bindingsConflict(thisKey, mkb)) {
                     return true;
                 }
             }
-            return predicate.test(entry);
+
+            for (KeyMapping thatKey : Minecraft.getInstance().options.keyMappings) {
+                if (!thatKey.isUnbound() && !HiddenBindingManager.isHidden(thatKey.getName())
+                        && !thatKey.getName().equals(thisKey.getName())
+                        && ModifierManager.bindingsConflict(thisKey, thatKey)) {
+                    return true;
+                }
+            }
+
+            return false;
         });
     }
 
@@ -64,17 +81,20 @@ public abstract class DisplayModeMixin {
                 return multiKeyBinding.getKey().equals(InputConstants.UNKNOWN);
             }
             case CONFLICTING -> {
+                if (HiddenBindingManager.isActionHidden(multiKeyBinding.getAction())) {
+                    return false;
+                }
                 for (KeyMapping kb : MultiKeyBindingManager.getGameOptions().keyMappings) {
-                    if (!kb.isUnbound() && kb.saveString()
-                            .equals(multiKeyBinding.getKey().getName())) {
+                    if (!kb.isUnbound() && !HiddenBindingManager.isHidden(kb.getName())
+                            && ModifierManager.bindingsConflict(kb, multiKeyBinding)) {
                         return true;
                     }
                 }
 
                 for (MultiKeyBinding mkb : MultiKeyBindingManager.getKeyBindings()) {
-                    if (!mkb.getId().equals(multiKeyBinding.getId()) && !mkb.getKey().equals(InputConstants.UNKNOWN) &&
-                            mkb.getKey().getName()
-                                    .equals(multiKeyBinding.getKey().getName())) {
+                    if (!mkb.getId().equals(multiKeyBinding.getId()) && !mkb.getKey().equals(InputConstants.UNKNOWN)
+                            && !HiddenBindingManager.isActionHidden(mkb.getAction())
+                            && ModifierManager.bindingsConflict(multiKeyBinding, mkb)) {
                         return true;
                     }
                 }
@@ -97,14 +117,22 @@ public abstract class DisplayModeMixin {
 
         // Wrap original predicate
         return entry -> {
+            boolean editMode = HiddenBindingManager.isEditMode();
+
             // Apply filter to custom MultiKeyBinding
             if (entry instanceof MultiKeyBindingEntry multiKeyBindingEntry) {
                 MultiKeyBinding multiKeyBinding = multiKeyBindingEntry.getMultiKeyBinding();
+                if (!editMode && HiddenBindingManager.isHidden(multiKeyBinding.getAction())) {
+                    return false;
+                }
                 return testMultiKeyBinding(multiKeyBinding);
             }
 
             // Include original entry if any associated MultiKeyBinding passes the filter
             if (entry instanceof KeyEntry keyEntry) {
+                if (!editMode && HiddenBindingManager.isHidden(keyEntry.getKey().getName())) {
+                    return false;
+                }
                 if (entry instanceof ControllingHideableKeyEntry hideableKeyEntry) {
                     if (!original.test(keyEntry)) {
                         hideableKeyEntry.setHidden(true);

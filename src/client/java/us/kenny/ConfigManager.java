@@ -132,12 +132,12 @@ public class ConfigManager {
     }
 
     /**
-     * Convert a keyCode to a key name (e.g. 2 -> key.mouse.middle).
+     * Convert a v1 keyCode (a GLFW key or mouse-button code) to a key name
+     * (e.g. 2 -> key.mouse.middle, 75 -> key.keyboard.k).
      *
      * @param keyCode The key code to convert.
      */
-    private static String convertKeyCodeToKeyName(int keyCode) {
-        InputConstants.Type keyType = keyCode <= 10 ? InputConstants.Type.MOUSE : InputConstants.Type.KEYBOARD;
-        return keyType.getOrCreate(keyCode).getName();
+    static String convertKeyCodeToKeyName(int keyCode) {
+        return LegacyGlfwKeys.nameOf(keyCode);
     }
 }

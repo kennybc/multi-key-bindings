@@ -9,32 +9,53 @@ import com.blamejared.controlling.client.NewKeyBindsList.KeyEntry;
 import com.blamejared.searchables.api.SearchableType;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 
 import net.minecraft.client.Options;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
+import net.minecraft.network.chat.CommonComponents;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.*;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import us.kenny.ToggleManager;
 import us.kenny.core.MultiKeyBindingEntry;
 import us.kenny.core.MultiKeyBindingScreen;
 import us.kenny.core.MultiKeyBindingScreenHelper;
+import us.kenny.core.profile.ProfileScreenController;
 import us.kenny.core.controlling.ControllingHideableKeyEntry;
 import us.kenny.core.controlling.ControllingMultiKeyBindingEntry;
+import us.kenny.mixin.OptionsSubScreenAccessor;
 
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 @Mixin(value = NewKeyBindsScreen.class, remap = false)
-public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
+public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen  {
+
     @Shadow
     private SortOrder sortOrder;
+
+    @Shadow
+    private Button buttonNone;
+
+    @Shadow
+    private Button buttonConflicting;
+
+    @Shadow
+    private Button buttonSort;
+
+    @Shadow
+    public abstract Button resetButton();
 
     @Shadow
     public abstract KeyBindsList getKeyBindsList();
@@ -42,8 +63,78 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
     @Shadow
     protected abstract CustomList getCustomList();
 
+    @Unique
+    private ProfileScreenController mkbProfileController;
+
     public NewKeyBindsScreenMixin(Screen screen, Options settings) {
         super(screen, settings);
+    }
+
+    @Unique
+    private ProfileScreenController mkbProfileController() {
+        if (this.mkbProfileController == null) {
+            OptionsSubScreenAccessor accessor = (OptionsSubScreenAccessor) this;
+            this.mkbProfileController = new ProfileScreenController(
+                    (Screen) (Object) this,
+                    () -> new NewKeyBindsScreen(accessor.getLastScreen(), accessor.getOptions()),
+                    true);
+        }
+        return this.mkbProfileController;
+    }
+
+    /**
+     * Reset edit-visibility mode on any fresh entry into Controlling's screen
+     * (except mid-toggle swap).
+     */
+    @Inject(method = "addFooter", at = @At("HEAD"), remap = true)
+    private void resetMkbVisibilityOnEnter(CallbackInfo ci) {
+        mkbProfileController().resetEditModeOnEnter();
+    }
+
+    @Inject(method = "addFooter", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/layouts/HeaderAndFooterLayout;addToFooter(Lnet/minecraft/client/gui/layouts/LayoutElement;)Lnet/minecraft/client/gui/layouts/LayoutElement;", remap = true), cancellable = true, remap = true)
+    private void customFooter(CallbackInfo ci, @Local Button toggleFreeButton) {
+        ProfileScreenController controller = mkbProfileController();
+
+        Button resetButton = this.resetButton();
+        resetButton.setWidth(98);
+        Button doneButton = Button.builder(CommonComponents.GUI_DONE, b -> this.onClose())
+                .size(98, 20)
+                .build();
+
+        LinearLayout container = (LinearLayout) this.layout.addToFooter(LinearLayout.vertical());
+        container.spacing(4);
+
+        LinearLayout top = container.addChild(LinearLayout.horizontal());
+        top.spacing(4);
+        top.addChild(toggleFreeButton);
+        top.addChild(this.buttonSort);
+        top.addChild(this.buttonNone);
+        top.addChild(this.buttonConflicting);
+
+        LinearLayout bottom = container.addChild(LinearLayout.horizontal());
+        bottom.spacing(4);
+        bottom.addChild(controller.buildVisibilityButton());
+        bottom.addChild(controller.buildDropdownButton(80));
+        bottom.addChild(resetButton);
+        bottom.addChild(doneButton);
+        ci.cancel();
+    }
+
+    @Inject(method = "render", at = @At("TAIL"), remap = true)
+    private void renderMkbPopup(net.minecraft.client.gui.GuiGraphics gfx, int mouseX, int mouseY,
+            float partialTicks, CallbackInfo ci) {
+        mkbProfileController().renderPopup(gfx, mouseX, mouseY);
+    }
+
+    /**
+     * @see us.kenny.mixin.KeyBindsScreenMixin#mouseScrolled
+     */
+    @Inject(method = "mouseScrolled", at = @At("HEAD"), cancellable = true, remap = false)
+    private void onMouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY,
+            CallbackInfoReturnable<Boolean> cir) {
+        if (mkbProfileController().handleMouseScroll(mouseX, mouseY, scrollY)) {
+            cir.setReturnValue(true);
+        }
     }
 
     /**
@@ -51,6 +142,10 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
      */
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true, remap = false)
     public void onMouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if (mkbProfileController().handleMouseClick(mouseX, mouseY, button)) {
+            cir.setReturnValue(true);
+            return;
+        }
         if (MultiKeyBindingScreenHelper.handleMouseClicked((MultiKeyBindingScreen) this, this.getKeyBindsList(),
                 button)) {
             cir.setReturnValue(true);
@@ -165,6 +260,6 @@ public abstract class NewKeyBindsScreenMixin extends KeyBindsScreen {
             }
         }
 
-        return rebuilt;
+        return MultiKeyBindingScreenHelper.filterEmptyCategories(rebuilt, e -> e instanceof KeyBindsList.CategoryEntry);
     }
 }

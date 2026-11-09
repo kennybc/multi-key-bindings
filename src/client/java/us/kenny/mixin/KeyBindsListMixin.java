@@ -8,12 +8,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 
+import us.kenny.HiddenBindingManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.ToggleManager;
 import us.kenny.core.MultiKeyBinding;
 import us.kenny.core.MultiKeyBindingEntry;
+import us.kenny.core.MultiKeyBindingScreenHelper;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -39,11 +43,19 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
             Operation<Integer> original) {
         KeyBindsList self = (KeyBindsList) (Object) this;
 
+        if (entry instanceof KeyBindsList.KeyEntry && !HiddenBindingManager.isEditMode()) {
+            KeyMapping keyBinding = ((KeyBindsListEntryAccessor) entry).getKeyMapping();
+            if (HiddenBindingManager.isHidden(keyBinding.getName())) {
+                return -1;
+            }
+        }
+
         int lastIndex = original.call(instance, entry);
-        if (entry instanceof KeyBindsList.KeyEntry) {
+        // Multi sub-bindings don't render in edit mode — visibility is a
+        // top-level trait, and their parent KeyEntry owns the eye toggle.
+        if (entry instanceof KeyBindsList.KeyEntry && !HiddenBindingManager.isEditMode()) {
             KeyMapping keyBinding = ((KeyBindsListEntryAccessor) entry).getKeyMapping();
 
-            // Create and insert a MultiKeyBindingEntry for any custom bindings
             Collection<MultiKeyBinding> multiKeyBindings = MultiKeyBindingManager
                     .getKeyBindings(keyBinding.getName());
             String category = Component.translatable(keyBinding.getCategory()).getString();
@@ -71,13 +83,20 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
         if (self.getClass() != KeyBindsList.class) {
             return;
         }
+        boolean editMode = HiddenBindingManager.isEditMode();
         boolean headerAdded = false;
         for (String action : ToggleManager.TOGGLE_ACTIONS) {
+            String fullAction = "multi." + action;
             Collection<MultiKeyBinding> bindings = MultiKeyBindingManager.getKeyBindings(action);
-            UUID primaryId = ToggleManager.getPrimaryId("multi." + action);
+            UUID primaryId = ToggleManager.getPrimaryId(fullAction);
             MultiKeyBinding primary = primaryId == null ? null
                     : bindings.stream().filter(b -> b.getId().equals(primaryId)).findFirst().orElse(null);
             if (primary == null) {
+                continue;
+            }
+            // In normal mode, respect the hidden set for toggle primaries.
+            // In edit mode, always show primaries so the user can toggle them.
+            if (!editMode && HiddenBindingManager.isHidden(fullAction)) {
                 continue;
             }
             if (!headerAdded) {
@@ -88,6 +107,10 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
             primary.setCategory(category);
             this.addEntry(new MultiKeyBindingEntry(self, primary, true));
 
+            // Sub-bindings never render in edit mode
+            if (editMode) {
+                continue;
+            }
             for (MultiKeyBinding sub : bindings) {
                 if (sub == primary) {
                     continue;
@@ -97,6 +120,25 @@ public abstract class KeyBindsListMixin extends AbstractSelectionList<KeyBindsLi
                 }
                 this.addEntry(new MultiKeyBindingEntry(self, sub));
             }
+        }
+    }
+
+    /**
+     * Remove any category header whose entries were all filtered out.
+     * Runs after both the vanilla category/entry adds and our own toggle
+     * entries.
+     */
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void pruneEmptyCategories(CallbackInfo ci) {
+        KeyBindsList self = (KeyBindsList) (Object) this;
+        if (self.getClass() != KeyBindsList.class) {
+            return;
+        }
+        List<KeyBindsList.Entry> children = new ArrayList<>(self.children());
+        List<KeyBindsList.Entry> kept = MultiKeyBindingScreenHelper.filterEmptyCategories(
+                children, e -> e instanceof KeyBindsList.CategoryEntry);
+        if (kept.size() != children.size()) {
+            self.replaceEntries(kept);
         }
     }
 }

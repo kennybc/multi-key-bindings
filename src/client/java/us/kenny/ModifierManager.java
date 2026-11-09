@@ -169,6 +169,9 @@ public class ModifierManager {
      * Compare the complete gestures represented by two vanilla key bindings.
      */
     public static boolean bindingsConflict(KeyMapping first, KeyMapping second) {
+        if (isMutuallyExempt(first.getName(), second.getName())) {
+            return false;
+        }
         return getBindingChord(first).conflictsWith(getBindingChord(second));
     }
 
@@ -177,6 +180,9 @@ public class ModifierManager {
      * key binding.
      */
     public static boolean bindingsConflict(KeyMapping first, MultiKeyBinding second) {
+        if (isMutuallyExempt(first.getName(), ToggleManager.stripMultiPrefix(second.getAction()))) {
+            return false;
+        }
         return getBindingChord(first).conflictsWith(getBindingChord(second));
     }
 
@@ -184,7 +190,28 @@ public class ModifierManager {
      * Compare the complete gestures represented by two additional key bindings.
      */
     public static boolean bindingsConflict(MultiKeyBinding first, MultiKeyBinding second) {
+        if (isMutuallyExempt(ToggleManager.stripMultiPrefix(first.getAction()),
+                ToggleManager.stripMultiPrefix(second.getAction()))) {
+            return false;
+        }
         return getBindingChord(first).conflictsWith(getBindingChord(second));
+    }
+
+    /**
+     * The debug overlay and debug modifier are both bound to F3 by default
+     * and would otherwise flag each other as duplicates on every launch.
+     * Suppress just that pair; user bindings on F3 should still flag against
+     * either of them so the conflict indicator remains meaningful.
+     *
+     * @param a Action name of one binding (multi. prefix already stripped).
+     * @param b Action name of the other binding.
+     */
+    private static boolean isMutuallyExempt(String a, String b) {
+        return isExemptAction(a) && isExemptAction(b);
+    }
+
+    private static boolean isExemptAction(String action) {
+        return "key.debug.overlay".equals(action) || "key.debug.modifier".equals(action);
     }
 
     private static BindingChord getBindingChord(KeyMapping binding) {
@@ -245,5 +272,12 @@ public class ModifierManager {
      */
     public static Map<String, List<InputConstants.Key>> getAllModifiers() {
         return Collections.unmodifiableMap(KEY_MODIFIERS);
+    }
+
+    /**
+     * Clear every configured modifier chord. Called during profile load.
+     */
+    public static void clearAll() {
+        KEY_MODIFIERS.clear();
     }
 }

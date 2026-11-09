@@ -42,6 +42,19 @@ dependencies {
     // Optional compile time dependency for development
     modCompileOnly files("libs/Searchables-fabric-1.21.9-1.0.2.jar")
     modCompileOnly files("libs/Controlling-fabric-1.21.9-27.0.2.jar")
+
+	testImplementation sourceSets.client.output
+	testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+configurations {
+	testImplementation.extendsFrom clientImplementation
+	testRuntimeOnly.extendsFrom clientRuntimeOnly
+}
+
+test {
+	useJUnitPlatform()
 }
 
 processResources {

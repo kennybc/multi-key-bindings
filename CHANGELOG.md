@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.0 (Nov 8, 2026)
+
+- Add key binding profiles: separate sets of bindings
+- Add `/mkb` commands to list, create, load, rename, duplicate and delete profiles
+- Add ability to hide key bindings you don't use from the key binds screen
+- Config moved to `config/multi-key-bindings/`; existing configs are migrated automatically
+
+## 1.3.5 (Sep 16, 2026)
+- Support for mouse binds on screen actions
+- Fix collisions on debug keys
+
 ## 1.3.4 (May 23, 2026)
 
 - Add custom key binding entry for toggling auto-jump

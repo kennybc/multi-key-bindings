@@ -14,8 +14,10 @@ import us.kenny.ModifierManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.mixin.KeyMappingAccessor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * Shared logic for handling key/mouse input while a binding is being captured
@@ -27,6 +29,33 @@ import java.util.function.Consumer;
  */
 public final class MultiKeyBindingScreenHelper {
     private MultiKeyBindingScreenHelper() {
+    }
+
+    /**
+     * Drop any category header whose group has no remaining children. A
+     * category is considered empty when it is immediately followed by another
+     * category entry or the end of the list.
+     *
+     * @param entries    The entries in display order.
+     * @param isCategory Predicate identifying category-header entries. Passed
+     *                   in so callers can match both vanilla and Controlling
+     *                   category classes as needed.
+     */
+    public static List<KeyBindsList.Entry> filterEmptyCategories(
+            List<KeyBindsList.Entry> entries,
+            Predicate<KeyBindsList.Entry> isCategory) {
+        List<KeyBindsList.Entry> kept = new ArrayList<>(entries.size());
+        for (int i = 0; i < entries.size(); i++) {
+            KeyBindsList.Entry entry = entries.get(i);
+            if (isCategory.test(entry)) {
+                boolean hasContent = i + 1 < entries.size() && !isCategory.test(entries.get(i + 1));
+                if (!hasContent) {
+                    continue;
+                }
+            }
+            kept.add(entry);
+        }
+        return kept;
     }
 
     /**

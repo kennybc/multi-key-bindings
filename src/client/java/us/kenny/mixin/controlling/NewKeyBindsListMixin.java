@@ -10,12 +10,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import us.kenny.HiddenBindingManager;
 import us.kenny.MultiKeyBindingManager;
 import us.kenny.ToggleManager;
 import us.kenny.core.MultiKeyBinding;
+import us.kenny.core.MultiKeyBindingScreenHelper;
 import us.kenny.core.controlling.ControllingMultiKeyBindingEntry;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 @Mixin(value = NewKeyBindsList.class, remap = false)
@@ -30,13 +34,20 @@ public abstract class NewKeyBindsListMixin {
     @Inject(method = "<init>", at = @At("RETURN"))
     private void addToggleEntries(CallbackInfo ci) {
         CustomList self = (CustomList) (Object) this;
+        boolean editMode = HiddenBindingManager.isEditMode();
         boolean headerAdded = false;
         for (String action : ToggleManager.TOGGLE_ACTIONS) {
+            String fullAction = "multi." + action;
             Collection<MultiKeyBinding> bindings = MultiKeyBindingManager.getKeyBindings(action);
-            UUID primaryId = ToggleManager.getPrimaryId("multi." + action);
+            UUID primaryId = ToggleManager.getPrimaryId(fullAction);
             MultiKeyBinding primary = primaryId == null ? null
                     : bindings.stream().filter(b -> b.getId().equals(primaryId)).findFirst().orElse(null);
             if (primary == null) {
+                continue;
+            }
+            // Normal mode respects the hidden set; edit mode always shows
+            // primaries so users can toggle them.
+            if (!editMode && HiddenBindingManager.isHidden(fullAction)) {
                 continue;
             }
             if (!headerAdded) {
@@ -50,6 +61,10 @@ public abstract class NewKeyBindsListMixin {
                     (KeyBindsList.Entry) null, primary, true);
             ((CustomListAccessor) self).invokeAddEntry(primaryEntry);
 
+            // Sub-bindings never render in edit mode
+            if (editMode) {
+                continue;
+            }
             for (MultiKeyBinding sub : bindings) {
                 if (sub == primary) {
                     continue;
@@ -60,6 +75,26 @@ public abstract class NewKeyBindsListMixin {
                 ((CustomListAccessor) self).invokeAddEntry(
                         new ControllingMultiKeyBindingEntry(self, primaryEntry, sub, false));
             }
+        }
+    }
+
+    /**
+     * Remove any CategoryEntry whose group has no remaining children (all
+     * were filtered out). Runs after addToggleEntries so it accounts for
+     * both vanilla and MKB toggle categories.
+     */
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void pruneEmptyCategories(CallbackInfo ci) {
+        CustomList self = (CustomList) (Object) this;
+        List<KeyBindsList.Entry> children = new ArrayList<>(self.children());
+        List<KeyBindsList.Entry> kept = MultiKeyBindingScreenHelper.filterEmptyCategories(children,
+                e -> e instanceof NewKeyBindsList.CategoryEntry || e instanceof KeyBindsList.CategoryEntry);
+
+        if (kept.size() != children.size()) {
+            self.allEntries.clear();
+            self.allEntries.addAll(kept);
+            self.children().clear();
+            self.children().addAll(kept);
         }
     }
 }

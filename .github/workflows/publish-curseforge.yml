@@ -39,6 +39,9 @@ jobs:
         run: |
           GAME_VERSIONS=$(curl -s -H "X-Api-Token: $CURSEFORGE_AUTHOR_TOKEN" "https://minecraft.curseforge.com/api/game/versions")
           FABRIC_ID=$(echo "$GAME_VERSIONS" | jq -r '.[] | select(.name=="Fabric") | .id')
+          # CurseForge requires an environment version (Client/Server); this is a client mod.
+          CLIENT_ID=$(echo "$GAME_VERSIONS" | jq -r '[.[] | select(.name=="Client")][0].id // empty')
+          echo "Fabric version id: $FABRIC_ID, Client environment id: ${CLIENT_ID:-not found}"
 
           # Fetch all published CurseForge files with pagination
           PUBLISHED_FILES_FILE=$(mktemp)
@@ -96,8 +99,10 @@ jobs:
               --arg changelog "$CHANGELOG" \
               --argjson versionId "$VERSION_ID" \
               --argjson fabricId "$FABRIC_ID" \
+              --arg clientId "$CLIENT_ID" \
               '{changelog: $changelog, changelogType: "markdown", displayName: $tag,
-                releaseType: "release", gameVersions: [$versionId, $fabricId]}' \
+                releaseType: "release",
+                gameVersions: ([$versionId, $fabricId] + (if $clientId == "" then [] else [$clientId | tonumber] end))}' \
               > curseforge-metadata.json
 
             curl -v -X POST "https://minecraft.curseforge.com/api/projects/1364298/upload-file" \

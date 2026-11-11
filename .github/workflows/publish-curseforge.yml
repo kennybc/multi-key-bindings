@@ -73,7 +73,7 @@ jobs:
             fi
 
             echo "Fetching release notes for $tag"
-            CHANGELOG=$(gh release view "$tag" --json body -q '.body' | jq -Rs .)
+            CHANGELOG=$(gh release view "$tag" --json body -q '.body')
 
             echo "Publishing release $tag to CurseForge"
             JAR_NAME="multi-key-bindings-${tag}.jar"
@@ -88,17 +88,21 @@ jobs:
               continue
             fi
 
-            METADATA="{\
-            \"changelog\": $CHANGELOG, \
-            \"changelogType\": \"markdown\", \
-            \"displayName\": \"$tag\", \
-            \"releaseType\": \"release\", \
-            \"gameVersions\": [$VERSION_ID, $FABRIC_ID], \
-            }"
+            # Build the JSON with jq and pass it to curl from a file: an inline
+            # -F value is cut at the first ';' (curl's field-parameter separator),
+            # which breaks any changelog containing a semicolon.
+            jq -n \
+              --arg tag "$tag" \
+              --arg changelog "$CHANGELOG" \
+              --argjson versionId "$VERSION_ID" \
+              --argjson fabricId "$FABRIC_ID" \
+              '{changelog: $changelog, changelogType: "markdown", displayName: $tag,
+                releaseType: "release", gameVersions: [$versionId, $fabricId]}' \
+              > curseforge-metadata.json
 
             curl -v -X POST "https://minecraft.curseforge.com/api/projects/1364298/upload-file" \
               -H "X-Api-Token: $CURSEFORGE_AUTHOR_TOKEN" \
-              -F "metadata=$METADATA;type=application/json" \
+              -F "metadata=<curseforge-metadata.json;type=application/json" \
               -F "file=@$JAR_NAME"
 
           done

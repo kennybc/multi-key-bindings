@@ -2,7 +2,7 @@
 
 ## 1.4.1 (Nov 16, 2026)
 
-- Fix startup crash with mods that hook options saving, such as Lumina (#92)
+- Fix startup crash with mods that hook options saving
 
 ## 1.4.0 (Nov 8, 2026)
 

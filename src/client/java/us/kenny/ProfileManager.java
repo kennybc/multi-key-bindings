@@ -338,7 +338,7 @@ public final class ProfileManager {
         // Set before load so load() doesn't save the in-memory state over the
         // outgoing (placeholder) profile name.
         activeProfileName = active;
-        load(active);
+        load(active, false);
         if (!Files.exists(INDEX)) {
             writeIndex(active);
         }
@@ -434,6 +434,14 @@ public final class ProfileManager {
      * @param name The profile to load.
      */
     public static boolean load(String requestedName) {
+        return load(requestedName, true);
+    }
+
+    /**
+     * @param persistOptions Whether to save options.txt after applying. False
+     *                       while the Options constructor is still running.
+     */
+    private static boolean load(String requestedName, boolean persistOptions) {
         String name = resolveName(requestedName);
         if (name == null) {
             MultiKeyBindingClient.LOGGER.warn("Profile not found: {}", requestedName);
@@ -464,7 +472,7 @@ public final class ProfileManager {
             net.minecraft.client.KeyMapping.resetMapping();
 
             net.minecraft.client.Options options = MultiKeyBindingManager.getGameOptions();
-            if (options != null) {
+            if (persistOptions && options != null) {
                 options.save();
             }
 

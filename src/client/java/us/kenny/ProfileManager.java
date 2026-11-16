@@ -438,13 +438,8 @@ public final class ProfileManager {
     }
 
     /**
-     * @param persistOptions Whether to call {@code Options#save()} after
-     *                       applying the profile. Must be false during
-     *                       bootstrap: that runs inside the {@code Options}
-     *                       constructor, before {@code Minecraft.options} is
-     *                       assigned, so other mods' save hooks that read it
-     *                       would crash. The profile is re-applied on every
-     *                       launch, so skipping the write there loses nothing.
+     * @param persistOptions Whether to save options.txt after applying. False
+     *                       while the Options constructor is still running.
      */
     private static boolean load(String requestedName, boolean persistOptions) {
         String name = resolveName(requestedName);

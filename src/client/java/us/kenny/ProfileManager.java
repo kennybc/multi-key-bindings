@@ -338,7 +338,7 @@ public final class ProfileManager {
         // Set before load so load() doesn't save the in-memory state over the
         // outgoing (placeholder) profile name.
         activeProfileName = active;
-        load(active);
+        load(active, false);
         if (!Files.exists(INDEX)) {
             writeIndex(active);
         }
@@ -434,6 +434,19 @@ public final class ProfileManager {
      * @param name The profile to load.
      */
     public static boolean load(String requestedName) {
+        return load(requestedName, true);
+    }
+
+    /**
+     * @param persistOptions Whether to call {@code Options#save()} after
+     *                       applying the profile. Must be false during
+     *                       bootstrap: that runs inside the {@code Options}
+     *                       constructor, before {@code Minecraft.options} is
+     *                       assigned, so other mods' save hooks that read it
+     *                       would crash. The profile is re-applied on every
+     *                       launch, so skipping the write there loses nothing.
+     */
+    private static boolean load(String requestedName, boolean persistOptions) {
         String name = resolveName(requestedName);
         if (name == null) {
             MultiKeyBindingClient.LOGGER.warn("Profile not found: {}", requestedName);
@@ -464,7 +477,7 @@ public final class ProfileManager {
             net.minecraft.client.KeyMapping.resetMapping();
 
             net.minecraft.client.Options options = MultiKeyBindingManager.getGameOptions();
-            if (options != null) {
+            if (persistOptions && options != null) {
                 options.save();
             }
 
